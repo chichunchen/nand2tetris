@@ -2,15 +2,15 @@
 
 ### Mul
 
-|   a   |   b   |  sel  |  out  |
-|   0   |   0   |   0   |   0   |
-|   0   |   0   |   1   |   0   |
-|   0   |   1   |   0   |   0   |
-|   0   |   1   |   1   |   1   |
-|   1   |   0   |   0   |   1   |
-|   1   |   0   |   1   |   0   |
-|   1   |   1   |   0   |   1   |
-|   1   |   1   |   1   |   1   |
+    |   a   |   b   |  sel  |  out  |
+    |   0   |   0   |   0   |   0   |
+    |   0   |   0   |   1   |   0   |
+    |   0   |   1   |   0   |   0   |
+    |   0   |   1   |   1   |   1   |
+    |   1   |   0   |   0   |   1   |
+    |   1   |   0   |   1   |   0   |
+    |   1   |   1   |   0   |   1   |
+    |   1   |   1   |   1   |   1   |
 
 While out == 1, we have
 row 4, 5, 7, 8, using canonical representation, we got
@@ -24,11 +24,11 @@ row 4, 5, 7, 8, using canonical representation, we got
 If sel == 0, then {a=in, b=0}
 else if sel == 1, {a=0, b=in}
 
-|  in   |  sel  |   a   |   b   |
-|   0   |   0   |   0   |   0   |
-|   0   |   1   |   0   |   0   |
-|   1   |   0   |   1   |   0   |
-|   1   |   1   |   0   |   1   |
+    |  in   |  sel  |   a   |   b   |
+    |   0   |   0   |   0   |   0   |
+    |   0   |   1   |   0   |   0   |
+    |   1   |   0   |   1   |   0   |
+    |   1   |   1   |   0   |   1   |
 
 In canonical representation, if in==1 && sel==0, then a equals 1,
 otherwise a equals to zero. Therefore, we have `in dot notsel` for a. Same for b, if in==1 && sel==1, then b equals to
