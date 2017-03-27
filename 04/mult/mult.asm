@@ -38,7 +38,5 @@ M=M+D
 0; JMP
 
 (END)
-@R1
-M=0
-@R0
-M=0
+@END
+0;JMP
