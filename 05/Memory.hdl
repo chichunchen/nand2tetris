@@ -27,5 +27,29 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // if address[14] == 0, then load ram16k
+    Not(in=address[14], out=nota);
+    And(a=address[14], b=false, out=and1);
+    And(a=nota, b=true, out=and2);
+    Or(a=and1, b=and2, out=ram);
+    And(a=ram, b=load, out=loadr);
+
+    // if address[13] == 0 and address[14] == 1 (notloadr), then load screen
+    Not(in=loadr, out=notloadr);
+    Not(in=address[13], out=notc);
+    And(a=address[13], b=false, out=and3);
+    And(a=notc, b=true, out=and4);
+    Or(a=and3, b=and4, out=iszero2);
+    And(a=notloadr, b=iszero2, out=screen);
+    And(a=screen, b=load, out=loads);
+
+    RAM16K(in=in, load=loadr, address=address[0..13], out=a);
+    Screen(in=in, load=loads, address=address[0..12], out=b);
+    Keyboard(out=c);
+
+    // set output
+    Mux16(a=false, b=a, sel=ram, out=outa);       // if address in ram range, then out=a
+    Mux16(a=false, b=b, sel=screen, out=outb);
+    Or16(a=outa, b=outb, out=outab);
+    Or16(a=outab, b=c, out=out);
 }

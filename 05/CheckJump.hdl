@@ -1,0 +1,29 @@
+// This file is a helper for checking the jump bit
+// and the control bit of ALU to make sure whether
+// PC jump or just increment.
+
+ /**
+ * CheckJump gate:
+ * if ZR == 0, out = (j1 & NG) || (j3 & notNG)
+ *  // if ZR == 1 and j2 == 1, then true
+ */
+
+CHIP CheckJump {
+
+    IN NG, ZR, j1, j2, j3;
+    OUT out;
+
+    PARTS:
+    // if ZR == 0, out = (j1 & NG) || (j3 & notNG)
+    And(a=j1, b=NG, out=w1);
+    Not(in=NG, out=notNG);
+    And(a=j3, b=notNG, out=w2);
+    Or(a=w1, b=w2, out=o1);
+    Mux(a=o1, b=false, sel=ZR, out=check1);
+
+    // if ZR == 1 and j2 == 1, then true
+    And(a=ZR, b=j2, out=eqzero);
+    Mux(a=false, b=true, sel=eqzero, out=check2);
+
+    Or(a=check1, b=check2, out=out);
+}
