@@ -48,19 +48,20 @@ CHIP CPU {
             out[7]=f, out[6]=no, out[2]=j1, out[1]=j2, out[0]=j3);
 
     // if it's a-instruction, then we should load the instruction into ARegister
-    Mux16(a=instruction, b=ALUout, sel=instruction[15], out=m1);
-    // if a-instruction, then load must be true
-    // if c-instruction, then check loadA
-    Mux(a=true, b=loadA, sel=instruction[15], out=la);
-    ARegister(in=m1, load=la, out=outA, out[0..14]=addressM);
+    Mux16(a=instruction, b=ALUout, sel=instruction[15], out=directA);
 
-    // if in loadAorM == 1, load M
-    // if a-instruction, then load A
-    Mux(a=false, b=loadAorM, sel=instruction[15], out=lAM);
+    // if a-instruction, then load must be true
+    // if c-instruction, then output loadA for check
+    Mux(a=true, b=loadA, sel=instruction[15], out=la);
+    ARegister(in=directA, load=la, out=outA, out[0..14]=addressM);
+
+    // if it's c-instruction and a bit is set, then load M
+    // otherwise, load A
+    And(a=loadAorM, b=instruction[15], out=lAM);
     Mux16(a=outA, b=inM, sel=lAM, out=AorM);
 
-    // if instruction-a, do not load
-    Mux(a=false, b=loadD, sel=instruction[15], out=lD);
+    // if it's instruction-c and loadD == true, then load it
+    And(a=loadD, b=instruction[15], out=lD);
     DRegister(in=ALUout, load=lD, out=outD);
 
     // if a-instruction, then comp=110000 => ALU(a=x, b=y, comp..., out=y)
@@ -74,9 +75,8 @@ CHIP CPU {
         zy=checkedZY, ny=checkedNY, f=checkedF, no=checkedNO,
         out=ALUout, out=outM, zr=ZR, ng=NG);
 
-    // if d2 == 1, then writeM == 1
-    Mux(a=false, b=true, sel=loadM, out=checkd2);
-    Mux(a=false, b=checkd2, sel=instruction[15], out=writeM);
+    // if c-instruction and d2 == 1, then writeM == 1
+    And(a=loadM, b=instruction[15], out=writeM);
 
     CheckJump(NG=NG, ZR=ZR, j1=j1, j2=j2, j3=j3, out=checkjump);
     PC(in=outA, load=checkjump, inc=true, reset=reset, out[0..14]=pc);
