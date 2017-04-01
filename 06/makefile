@@ -1,2 +1,2 @@
 main:
-	gcc -g -Wall ./HackAssembler.c
+	gcc -Wall ./HackAssembler.c
