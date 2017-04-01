@@ -6,7 +6,7 @@
 
 #define DEFAULT_START 16
 #define BUFFERLEN 100
-#define ENTRYNUM  1000
+#define ENTRYNUM  24577
 char buffer[BUFFERLEN];
 
 struct symbol {      // table entry
@@ -50,7 +50,6 @@ void initializer()
         }
         addEntry(virtual_label, i);
     }
-
     registerptr = DEFAULT_START;
 }
 
@@ -59,7 +58,7 @@ bool contains(char *label)
     int i;
     for (i = 0; i < ENTRYNUM; i++) {
         //printf("compare %s\n", symboltab[j].label);
-        if (strcmp(label, symboltab[i].label) == 0) {
+        if (strncmp(label, symboltab[i].label, strlen(label)-1) == 0) { // ignore the null terminator, it might be '\n' or EOF
             printf("Has set up.\n");
             return true;
         }
@@ -71,10 +70,7 @@ void addEntry(char *label, int address)
 {
     strcpy(symboltab[symboltabptr].label, label);
     symboltab[symboltabptr].address = address;
-//     printf("T: %d ", symboltab[symboltabptr].address);
-//     printf(", %s\n", symboltab[symboltabptr].label);
     symboltabptr++;
-    //registerptr++;
 }
 
 int getAddress(char *symbol)
@@ -130,35 +126,35 @@ int main(int argc, const char *argv[])
                 }
             }
         }
+        fseek(fp, 0, SEEK_SET);
 
         // parse symbolic a-instruction
-//         while((i = getline(&lineptr, &linecap, fp)) > 0) {
-//             char command[linecap];
-//             char *ptr = buffer;
-//             while(*ptr == ' ')  // skip whitespace in front of the any text
-//                 ptr++;
-//             if (*ptr == '/')
-//                 continue;
-//             int j = 0;
-//             while(j < i) {
-//                 command[j++] = *ptr++;
-//                 if (*ptr == ' ' || *ptr == '\n')
-//                     break;
-//             }
-//             command[j] = '\0';
-//             if (strlen(command) > 1) {      // above did not filter the newline, and if there is, just skip it
-//                 if (command[0] == '@') {
-//                     if (!isdigit(command[1])) {
-//                         char *label = &command[1];
-//                         if (!contains(label)) {
-//                             addEntry(label);
-//                         }
-//                     }
-//                 }
-//                 linenum++;
-//                 printf("%s\n", command);
-//             }
-//         }
+        while((i = getline(&lineptr, &linecap, fp)) > 0) {      // Pass 2
+            char command[linecap];
+            char *ptr = buffer;
+            while(*ptr == ' ')  // skip whitespace in front of the any text
+                ptr++;
+            if (*ptr == '/')
+                continue;
+            int j = 0;
+            while(j < i) {
+                command[j++] = *ptr++;
+                if (*ptr == ' ' || *ptr == '\n')
+                    break;
+            }
+            command[j] = '\0';
+            if (strlen(command) > 1) {      // above did not filter the newline, and if there is, just skip it
+                if (command[0] == '@') {
+                    if (!isdigit(command[1])) {
+                        char *label = &command[1];
+                        if (!contains(label)) {
+                            addEntry(label, registerptr++);
+                            printf("add: %s\n", label);
+                        }
+                    }
+                }
+            }
+        }
     }
     int j;
     for (j = 0; j < ENTRYNUM; j++) {
