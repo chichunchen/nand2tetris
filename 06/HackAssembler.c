@@ -251,7 +251,7 @@ char * convertC(char *instruction)
     } else {
         token_1[0] = '\0';
     }
-    printf("token_1 %s\n", token_1);
+    //printf("token_1 %s\n", token_1);
 
     // computer the start position of token_2
     i = has_tok_1;
@@ -283,8 +283,8 @@ char * convertC(char *instruction)
     } else {
         token_3[0] = '\0';
     }
-    printf("token_2 %s, len %lu\n", token_2, strlen(token_2));
-    printf("token_3 %s\n", token_3);
+//     printf("token_2 %s, len %lu\n", token_2, strlen(token_2));
+//     printf("token_3 %s\n", token_3);
 
     // turn to binary
     char *dest = convertDest(token_1);
@@ -371,14 +371,13 @@ int main(int argc, const char *argv[])
             for(; j < i && *ptr != ' ' && *ptr != '\n'; j++, ptr++) {
                 command[j] = *ptr;
             }
-            command[j] = '\0';
-            if (!isalnum(command[j-1]))
-                command[j-1] = '\0';
+            while(!isalnum(command[j]))
+                command[j--] = '\0';
             printf("command: %s\n", command);
             if (strlen(command) > 1) {      // above did not filter the newline, and if there is, just skip it
                 if (command[0] == '@') {
+                    char *label = &command[1];
                     if (!isdigit(command[1])) {
-                        char *label = &command[1];
                         if (!contains(label)) {
                             addEntry(label, registerptr++);
                         } else {
@@ -387,6 +386,11 @@ int main(int argc, const char *argv[])
                             fputs(convertA(getAddress(label), out), fw);
                             fputs("\n", fw);
                         }
+                    } else {
+                        char out[17];
+                        printf("AAA %s %s\n", label, convertA((unsigned) atoi(label), out));
+                        fputs(convertA((unsigned)atoi(label), out), fw);
+                        fputs("\n", fw);
                     }
                 } else if (command[0] != '(') {        // handle instruction c
                     printf("%s\n", convertC(command));
@@ -396,6 +400,6 @@ int main(int argc, const char *argv[])
             }
         }
     }
-    printTable();
+    //printTable();
     return 0;
 }
