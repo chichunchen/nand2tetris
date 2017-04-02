@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include "dbg.h"
 
 #define DEFAULT_START 16
 #define BUFFERLEN 100
@@ -141,9 +142,6 @@ char * convertA(unsigned int in, char *out)
         out[i] = (in & mask) ? '1' : '0';
         in <<= 1;
     }
-    if (strcmp("1111111111111111", out) == 0) {
-        printf("error in=%d\n", in);
-    }
     return out;
 }
 
@@ -191,7 +189,7 @@ char * convertComp(char *src, int len, int * a)
         }
         ptr++;
     }
-    //printf("a: %d, src: %s\n", *a, src);
+    debug("a: %d, src: %s\n", *a, src);
 
     // after check the a bit, no matter A/M used in src, turn A/M in src to A
     for (i = 0; i < COMPTAB_LEN; i++) {
@@ -359,8 +357,6 @@ int main(int argc, const char *argv[])
             char *label = malloc(sizeof(char) * BUFFERLEN);
             if (*ptr != '(') {
                 if (*lineptr != '\n' && *(lineptr+1) != '\n' && *lineptr != '/') {
-//                     printf("%s ", lineptr);
-//                     printf("linenum %d++\n", linenum);
                     linenum++;
                 }
                 continue;
@@ -373,7 +369,6 @@ int main(int argc, const char *argv[])
                 if (*(ptr-2) == ')') {    // 2 = (null terminator) + ')'
                     label[i-2] = '\0';
                     addEntry(label, linenum);
-                    //printf("%s, linenum: %d\n", label, linenum);
                 }
                 else {
                     fprintf(stderr, ") is missed\n");
@@ -396,11 +391,10 @@ int main(int argc, const char *argv[])
                 command[j] = *ptr;
             }
             command[j] = '\0';
-            //printf("command: %s\n", command);
+            debug("command: %s\n", command);
             if (strlen(command) > 1) {      // above did not filter the newline, and if there is, just skip it
                 if (command[0] == '@') {
                     char *label = &command[1];
-                    printf("lable: %s\n", label);
                     if (!isdigit(*label)) {
                         if (!contains(label)) {
                             addEntry(label, registerptr++);
@@ -410,12 +404,12 @@ int main(int argc, const char *argv[])
                         fputs("\n", fw);
                     } else {
                         char out[17];
-                        //printf("AAA %s %s\n", label, convertA((unsigned) atoi(label), out));
+                        debug("AAA %s %s\n", label, convertA((unsigned) atoi(label), out));
                         fputs(convertA((unsigned) atoi(label), out), fw);
                         fputs("\n", fw);
                     }
                 } else if (command[0] != '(') {        // handle instruction c
-                    //printf("%s\n", convertC(command));
+                    debug("%s\n", convertC(command));
                     fputs(convertC(command), fw);
                     fputs("\n", fw);
                 }
@@ -424,6 +418,8 @@ int main(int argc, const char *argv[])
         fclose(fp);
         fclose(fw);
     }
+#ifndef NDEBUG
     printTable();
+#endif
     return 0;
 }

@@ -1,2 +1,2 @@
 main:
-	gcc -Wall ./HackAssembler.c
+	gcc -Wall -DNDEBUG ./HackAssembler.c
