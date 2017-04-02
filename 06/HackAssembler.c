@@ -93,7 +93,7 @@ bool contains(char *label)
 {
     int i;
     for (i = 0; i < ENTRYNUM; i++) {
-        //printf("compare %s\n", symboltab[j].label);
+        //printf("compare %s\n", symboltab[i].label);
         if (strncmp(label, symboltab[i].label, strlen(label)-1) == 0) { // ignore the null terminator, it might be '\n' or EOF
             //printf("Has set up.\n");
             return true;
@@ -109,6 +109,8 @@ void addEntry(char *label, int address)
     symboltabptr++;
 }
 
+// Returns the address associated with the symbol
+// if cannot find one, add the symbol into symboltab, and retrun the address
 int getAddress(char *symbol)
 {
     int i;
@@ -116,8 +118,8 @@ int getAddress(char *symbol)
         if (strcmp(symboltab[i].label, symbol) == 0)
             return symboltab[i].address;
     }
-    fprintf(stderr, "[getAddress]: cannot found address\n");
-    return -1;
+    addEntry(symbol, registerptr);
+    return registerptr++;
 }
 
 void printTable()
@@ -138,6 +140,9 @@ char * convertA(unsigned int in, char *out)
     for (i = 0; i < BITS_NUM; i++) {
         out[i] = (in & mask) ? '1' : '0';
         in <<= 1;
+    }
+    if (strcmp("1111111111111111", out) == 0) {
+        printf("error in=%d\n", in);
     }
     return out;
 }
@@ -347,7 +352,7 @@ int main(int argc, const char *argv[])
         size_t linecap = BUFFERLEN;
         int linenum = 0;
         int i;
-        // parse each linenum label, i.e, the text inside the braces,
+        // parse each linenum label, i.e, the text inside the braces
         // into the symboltab
         while((i = getline(&lineptr, &linecap, fp)) > 0) {      // Pass 1
             char *ptr = lineptr;
@@ -387,27 +392,26 @@ int main(int argc, const char *argv[])
             if (*ptr == '/')
                 continue;
             int j = 0;
-            for(; j < i && *ptr != ' ' && *ptr != '\n'; j++, ptr++) {
+            for(; j < i && *ptr != ' ' && *ptr != '\n' && isprint(*ptr); j++, ptr++) {
                 command[j] = *ptr;
             }
-            while(!isalnum(command[j]))
-                command[j--] = '\0';
+            command[j] = '\0';
             //printf("command: %s\n", command);
             if (strlen(command) > 1) {      // above did not filter the newline, and if there is, just skip it
                 if (command[0] == '@') {
                     char *label = &command[1];
-                    if (!isdigit(command[1])) {
+                    printf("lable: %s\n", label);
+                    if (!isdigit(*label)) {
                         if (!contains(label)) {
                             addEntry(label, registerptr++);
                         }
                         char out[50];
-                        //printf("AAA %s\n", convertA(getAddress(label), out));
-                        fputs(convertA(getAddress(label), out), fw);
+                        fputs(convertA((unsigned) getAddress(label), out), fw);
                         fputs("\n", fw);
                     } else {
                         char out[17];
                         //printf("AAA %s %s\n", label, convertA((unsigned) atoi(label), out));
-                        fputs(convertA((unsigned)atoi(label), out), fw);
+                        fputs(convertA((unsigned) atoi(label), out), fw);
                         fputs("\n", fw);
                     }
                 } else if (command[0] != '(') {        // handle instruction c
@@ -420,6 +424,6 @@ int main(int argc, const char *argv[])
         fclose(fp);
         fclose(fw);
     }
-    //printTable();
+    printTable();
     return 0;
 }
