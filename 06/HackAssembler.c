@@ -35,6 +35,10 @@ int getAddress(char *symbol);
 // code module
 char * convertA(unsigned int in, char *out);
 void printTable();
+char * convertDest(char *src);
+char * convertComp(char *src, int len, int * a);
+char * convertJMP(char *src);
+char * convertC(char *instruction);
 
 // initialize the symbol table with all the predefined symbols and
 // their pre-allocated RAM addresses
@@ -225,7 +229,7 @@ char * convertC(char *instruction)
          *token_2 = malloc(sizeof(char) * TOK_LEN),
          *token_3 = malloc(sizeof(char) * TOK_LEN);
     int check_a;
-    printf("instruction: %s\n", instruction);
+    //printf("instruction: %s\n", instruction);
     // remember the index of the equal symbol
     // if the index is zero, then we know that token_1 or token_3
     // should be skipped
@@ -310,6 +314,21 @@ char * convertC(char *instruction)
     return result;
 }
 
+void test_convertA()
+{
+    //char digit[50];
+    char out[50];
+    printf("result of %d = %s\n", 23857, convertA(23857, out));
+}
+
+void test_convertC()
+{
+    char *test[] = {"D=D|M", "AMD=D;JMP", "M=1", "0;JMP", "D=D-A"};
+    int i;
+    for (i = 0; i < 5; i++)
+        printf("result of %s = %s\n", test[i], convertC(test[i]));
+}
+
 int main(int argc, const char *argv[])
 {
     initializer();
@@ -319,9 +338,9 @@ int main(int argc, const char *argv[])
     else {
         FILE *fp = fopen(argv[1], "r");
         strcpy(buffer, argv[1]);
-        char *writefile = buffer;
-        while(*writefile++ != '.') ;
-        strcpy(writefile, "hack");
+        char *writeptr = buffer;
+        while(*writeptr++ != '.') ;
+        strcpy(writeptr, "hack");
         FILE *fw = fopen(buffer, "w");
 
         char *lineptr = buffer;
@@ -373,32 +392,33 @@ int main(int argc, const char *argv[])
             }
             while(!isalnum(command[j]))
                 command[j--] = '\0';
-            printf("command: %s\n", command);
+            //printf("command: %s\n", command);
             if (strlen(command) > 1) {      // above did not filter the newline, and if there is, just skip it
                 if (command[0] == '@') {
                     char *label = &command[1];
                     if (!isdigit(command[1])) {
                         if (!contains(label)) {
                             addEntry(label, registerptr++);
-                        } else {
-                            char out[50];
-                            printf("AAA %s\n", convertA(getAddress(label), out));
-                            fputs(convertA(getAddress(label), out), fw);
-                            fputs("\n", fw);
                         }
+                        char out[50];
+                        //printf("AAA %s\n", convertA(getAddress(label), out));
+                        fputs(convertA(getAddress(label), out), fw);
+                        fputs("\n", fw);
                     } else {
                         char out[17];
-                        printf("AAA %s %s\n", label, convertA((unsigned) atoi(label), out));
+                        //printf("AAA %s %s\n", label, convertA((unsigned) atoi(label), out));
                         fputs(convertA((unsigned)atoi(label), out), fw);
                         fputs("\n", fw);
                     }
                 } else if (command[0] != '(') {        // handle instruction c
-                    printf("%s\n", convertC(command));
+                    //printf("%s\n", convertC(command));
                     fputs(convertC(command), fw);
                     fputs("\n", fw);
                 }
             }
         }
+        fclose(fp);
+        fclose(fw);
     }
     //printTable();
     return 0;
