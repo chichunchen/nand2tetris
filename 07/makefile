@@ -1,2 +1,2 @@
 main:
-	gcc ./HackVM.c
+	gcc ./VMtranslator.c
