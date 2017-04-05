@@ -22,8 +22,10 @@ char buffer[BUFFERLEN];
 // parser
 char * parse_line(char *str, int len);
 int commandType(char *line);
-char *arg1(char *command, int len);
-char *arg2(char *command, int len);
+char *arg1(char *command, int type);
+int arg2(char *command, int type);
+
+// code generator
 
 int main(int argc, const char *argv[])
 {
@@ -40,15 +42,15 @@ int main(int argc, const char *argv[])
                 int type = commandType(line);
                 switch(type) {
                     case C_ARITHMETIC:
-                        printf("arg1: %s\n", arg1(line, strlen(line)));
+                        printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
                         break;
                     case C_PUSH:
-                        printf("arg1: %s\n", arg1(line, strlen(line)));
-                        printf("arg2: %s\n", arg2(line, strlen(line)));
+                        printf("arg1: %s\n", arg1(line, C_PUSH));
+                        printf("arg2: %d\n", arg2(line, C_PUSH));
                         break;
                     case C_POP:
-                        printf("arg1: %s\n", arg1(line, strlen(line)));
-                        printf("arg2: %s\n", arg2(line, strlen(line)));
+                        printf("arg1: %s\n", arg1(line, C_POP));
+                        printf("arg2: %d\n", arg2(line, C_POP));
                         break;
                 }
             }
@@ -107,26 +109,39 @@ int commandType(char *line)
 }
 
 // returns the first argument of the current command
-char *arg1(char *command, int len)
+// ex: push constant 1
+// then return constant
+// In the case of C_ARITHMETIC, the command itself is returned.
+char *arg1(char *command, int type)
 {
+    if (type == C_ARITHMETIC) {
+        return command;
+    }
+    char *ptr = command;
+    while(*ptr++ != ' ')
+        ;
     int i;
-    for (i = 0; i < len && *command != ' '; i++, command++) {
-        buffer[i] = *command;
+    for (i = 0; i < strlen(command) && *ptr != ' '; i++, ptr++) {
+        buffer[i] = *ptr;
     }
     buffer[i] = '\0';
     return buffer;
 }
 
 // returns the second argument of the current command
-char *arg2(char *command, int len)
+// should be called only if the current command is C_PUSH, C_POP, C_FUNCTION, or C_CALL
+int arg2(char *command, int type)
 {
-    char *ptr = command;
-    while(*ptr++ != ' ')
-        ;
-    int i;
-    for (i = 0; i < len && *ptr != ' '; i++, ptr++) {
-        buffer[i] = *ptr;
+    if (type == C_PUSH || type == C_POP || type == C_FUNCTION || type == C_CALL) {
+        char *ptr = command;
+        while(*ptr++ != ' ')
+            ;
+        while(*ptr++ != ' ')
+            ;
+        return atoi(ptr);
     }
-    buffer[i] = '\0';
-    return buffer;
+    else {
+        fprintf(stderr, "arg2 type error\n");
+        return -1;
+    }
 }
