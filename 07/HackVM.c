@@ -3,8 +3,10 @@
 #include <string.h>
 #include <ctype.h>
 
-#define BUFFERLEN 1024
-#define TOK_LEN   16
+#define BUFFERLEN       1024
+#define TOK_LEN         16
+#define ARITHMETICS_NUM 9
+#define TYPES_NUM       8
 
 enum command_type {
     C_ARITHMETIC,
@@ -15,6 +17,30 @@ enum command_type {
     C_RETURN,
     C_CALL
 };
+const char *default_register[] = {
+    "SP", "LCL", "ARG", "THIS", "THAT"
+};
+
+const char *arithmetics[] = {
+    "add", "sub",
+    "lt", "eq", "gt",
+    "neg", "and", "or", "not"
+};
+const char *types[] = {
+    "push", "pop",
+    "label", "goto", "if-goto",
+    "function", "call", "return"
+};
+
+const char *pop_2_args = "@SP\n"
+                         "AM=M-1\n"
+                         "D=M\n"
+                         "@SP\n"
+                         "M=M-1\n"
+                         "A=M\n"
+                         "%s"
+                         "@SP\n"
+                         "M=M+1\n";
 
 FILE *fp, *fw;
 char buffer[BUFFERLEN];
@@ -26,6 +52,124 @@ char *arg1(char *command, int type);
 int arg2(char *command, int type);
 
 // code generator
+char *setFileName(const char *filename);
+void writeArithmetic(char *str);
+void writePushPop(int type, char *str, int index);
+
+char *setFileName(const char *filename)
+{
+    strcpy(buffer, filename);
+    char *writeptr = buffer;
+    while(*writeptr++ != '.') ;
+    strcpy(writeptr, "asm");
+    return buffer;
+}
+
+void writeArithmetic(char *str)
+{
+    char *arith_content[] = {
+        "M=D+M\n",          // add
+        "M=M-D\n",          // sub
+    };
+    int i;
+    for (i = 0; i < ARITHMETICS_NUM; i++) {
+        if (strcmp(str, arithmetics[i]) == 0) {
+            strcpy(buffer, pop_2_args);
+            fprintf(fw, buffer, arith_content[i]);
+        }
+    }
+
+}
+
+// writes the assembly code that is the translation of the given
+// arithmetic command
+void writePushPop(int type, char *str, int index)
+{
+    char *push_constant = "@%d\n"
+        "D=A\n"
+        "@SP\n"
+        "A=M\n"
+        "M=D\n"
+        "@SP\n"
+        "M=M+1\n";
+    char *up_push = "@%s\n"
+                    "A=M\n";
+    char *down_push = "D=M\n"
+                      "@SP\n"
+                      "A=M\n"
+                      "M=D\n"
+                      "@SP\n"
+                      "M=M+1\n";
+    char *push_temp_pointer = "@R%d\n";
+    char *pop_temp_pointer =  "@SP\n"
+                              "A=M-1\n"
+                              "D=M\n"
+                              "@R%d\n"
+                              "M=D\n"
+                              "@SP\n"
+                              "M=M-1\n";
+    char *up_pop =   "@SP\n"
+                     "A=M-1\n"
+                     "D=M\n"
+                     "@%s\n"          // the string should be local, argument, this, that
+                     "A=M\n";         // after A=M might be several A=A+1, considering the value of arg2
+    char *repeat = "A=A+1\n";
+    char *down_pop = "M=D\n"
+                     "@SP\n"
+                     "M=M-1\n";
+    const char * map_1[] = {
+        "local", "argument", "this", "that"
+    };
+    if (type == C_PUSH) {
+        if (strcmp(str, "constant") == 0) {
+            fprintf(fw, push_constant, index);
+        } else {
+            int i;
+            for (i = 0; i < 4; i++) {
+                if (strcmp(str, map_1[i]) == 0) {
+                    strcpy(buffer, up_push);
+                    int j;
+                    for (j = 0; j < index; j++) {
+                        strcat(buffer, repeat);
+                    }
+                    strcat(buffer, down_push);
+                    fprintf(fw, buffer, default_register[i+1]); // skip SP
+                }
+            }
+            if (strcmp(str, "temp") == 0) {
+                strcpy(buffer, push_temp_pointer);
+                strcat(buffer, down_push);
+                fprintf(fw, buffer, 5+index);
+            } else if (strcmp(str, "pointer") == 0) {
+                strcpy(buffer, push_temp_pointer);
+                strcat(buffer, down_push);
+                fprintf(fw, buffer, 3+index);
+            }
+        }
+    }
+    else if (type == C_POP) {
+        int i;
+        for (i = 0; i < 4; i++) {
+            if (strcmp(str, map_1[i]) == 0) {
+                //printf("ggg %s, len=%d\n", str, strlen(str));
+                strcpy(buffer, up_pop);
+                int j;
+                for (j = 0; j < index; j++) {
+                    strcat(buffer, repeat);
+                }
+                strcat(buffer, down_pop);
+                fprintf(fw, buffer, default_register[i+1]); // skip SP
+            }
+            if (strcmp(str, "temp") == 0) {
+                strcpy(buffer, pop_temp_pointer);
+                fprintf(fw, buffer, 5+index);
+            } else if (strcmp(str, "pointer") == 0) {
+                strcpy(buffer, pop_temp_pointer);
+                fprintf(fw, buffer, 3+index);
+            }
+        }
+    }
+}
 
 int main(int argc, const char *argv[])
 {
@@ -33,6 +177,8 @@ int main(int argc, const char *argv[])
         printf("usage: ./a.out <name of file or directory>");
     else {
         fp = fopen(argv[1], "r");
+        fw = fopen(setFileName(argv[1]), "w");
+
         char *lineptr = buffer;
         size_t linecap = BUFFERLEN;
         int i;
@@ -42,23 +188,26 @@ int main(int argc, const char *argv[])
                 int type = commandType(line);
                 switch(type) {
                     case C_ARITHMETIC:
-                        printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
+                        writeArithmetic(arg1(line, C_ARITHMETIC));
+//                         printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
                         break;
                     case C_PUSH:
-                        printf("arg1: %s\n", arg1(line, C_PUSH));
-                        printf("arg2: %d\n", arg2(line, C_PUSH));
+                        writePushPop(C_PUSH, arg1(line, C_PUSH), arg2(line, C_PUSH));
+//                         printf("arg1: %s\n", arg1(line, C_PUSH));
+//                         printf("arg2: %d\n", arg2(line, C_PUSH));
                         break;
                     case C_POP:
-                        printf("arg1: %s\n", arg1(line, C_POP));
-                        printf("arg2: %d\n", arg2(line, C_POP));
+                        writePushPop(C_POP, arg1(line, C_PUSH), arg2(line, C_PUSH));
+//                         printf("arg1: %s\n", arg1(line, C_POP));
+//                         printf("arg2: %d\n", arg2(line, C_POP));
                         break;
                 }
             }
         }
     }
 
-    //fclose(fp);
-    //fclose(fw);
+    fclose(fp);
+    fclose(fw);
     return 0;
 }
 
@@ -83,24 +232,14 @@ char * parse_line(char *str, int len)
 // C_ARITHMETIC is returned for all the arithmetic commands.
 int commandType(char *line)
 {
-    char *arithmetics[] = {
-        "add", "sub",
-        "lt", "eq", "gt",
-        "neg", "and", "or", "not"
-    };
-    char *types[] = {
-        "push", "pop",
-        "label", "goto", "if-goto",
-        "function", "call", "return"
-    };
     int i;
-    for (i = 0; i < 9; i++) {
-        char *temp = arithmetics[i];
+    for (i = 0; i < ARITHMETICS_NUM; i++) {
+        const char *temp = arithmetics[i];
         if (strncmp(line, temp, strlen(temp)) == 0)
             return C_ARITHMETIC;
     }
-    for (i = 0; i < 8; i++) {
-        char *temp = types[i];
+    for (i = 0; i < TYPES_NUM; i++) {
+        const char *temp = types[i];
         if (strncmp(line, temp, strlen(temp)) == 0)
             return i+1;
     }

@@ -1,0 +1,10 @@
+push constant x:
+@x
+D=A
+// put x to the top of stack
+@SP
+A=M
+M=D
+// top++
+@SP
+M=M+1

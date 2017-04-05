@@ -1,0 +1,122 @@
+// push constant 10
+@10
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+// pop local 0
+@SP
+A=M-1
+D=M
+@LCL
+A=M
+M=D
+@SP
+M=M-1
+
+// push constant 21
+@21
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+// push constant 22
+@22
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+// pop argument 2
+@SP
+A=M-1
+D=M
+@ARG
+A=M
+A=A+1
+A=A+1
+M=D
+@SP
+M=M-1
+
+// pop argument 1
+@SP
+A=M-1
+D=M
+@ARG
+A=M
+A=A+1
+M=D
+@SP
+M=M-1
+
+// push constant 36
+@36
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+// pop this 6
+@SP
+A=M-1
+D=M
+@THIS
+A=M
+A=A+1
+A=A+1
+A=A+1
+A=A+1
+A=A+1
+A=A+1
+M=D
+@SP
+M=M-1
+
+// pop temp 6
+@R11    // temp i == 5+i
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M-1
+
+// pop pointer 0
+@SP
+A=M-1
+D=M
+@R3   // 3+0
+M=D
+@SP
+M=M-1
+
+// push temp 6
+@R11    // temp i == 5+i
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+
+
+// push local 0
+@LCL
+A=M     // add repeat
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
