@@ -1,0 +1,2 @@
+main:
+	gcc ./HackVM.c
