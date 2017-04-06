@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
 
 #define BUFFERLEN       1024
 #define ARITHMETICS_NUM 9
@@ -64,22 +69,26 @@ const char *compare = "@SP\n"
                       "@SP\n"
                       "M=M+1\n";
 
-FILE *fp, *fw;
 char buffer[BUFFERLEN];
 char filename[100];
 
 // parser
+int is_regular_file(const char *path);
+int is_vmfile(const char *name);
+char * fetch_filename(const char *path, const char *name);
 char * parse_line(char *str, int len);
 int commandType(char *line);
 char *arg1(char *command, int type);
 int arg2(char *command, int type);
 
 // code generator
+void code_generator(const char *vmfilename, FILE *fw);
 char *setFileName(const char *filename);
 char *getFileName(char *name);
-void writeArithmetic(char *str);
-void writePushPop(int type, char *str, int index);
+void writeArithmetic(char *str, FILE *fw);
+void writePushPop(int type, char *str, int index, FILE *fw);
 
+// set filename to path/xxx.asm
 char *setFileName(const char *arg)
 {
     strcpy(filename, arg);
@@ -90,7 +99,7 @@ char *setFileName(const char *arg)
     return buffer;
 }
 
-// get filename from path
+// get xxx from path/xxx.asm
 char *getFileName(char *name)
 {
     int last = 0;
@@ -110,7 +119,7 @@ char *getFileName(char *name)
     return buffer;
 }
 
-void writeArithmetic(char *str)
+void writeArithmetic(char *str, FILE *fw)
 {
     const char *arith_content[] = {       // Since we fetch value from stack(which is LIFO), M is arg1, D is arg2
         "M=M+D\n",          // add
@@ -132,17 +141,14 @@ void writeArithmetic(char *str)
     else if (strcmp(str, "lt") == 0) {
         fprintf(fw, arith_content[2], "lt", lt_counter, "JLT",
                 "lt", lt_counter, "lt", lt_counter, "lt", lt_counter);
-        //static_counter++;
     }
     else if (strcmp(str, "eq") == 0) {
         fprintf(fw, arith_content[2], "eq", eq_counter, "JEQ",
                 "eq", eq_counter, "eq", eq_counter, "eq", eq_counter);
-        //static_counter++;
     }
     else if (strcmp(str, "gt") == 0) {
         fprintf(fw, arith_content[2], "gt", gt_counter, "JGT",
                 "gt", gt_counter, "gt", gt_counter, "gt", gt_counter);
-        //static_counter++;
     }
     else if (strcmp(str, "and") == 0) {
         fprintf(fw, pop_2_args, arith_content[6]);
@@ -161,7 +167,7 @@ void writeArithmetic(char *str)
 
 // writes the assembly code that is the translation of the given
 // arithmetic command
-void writePushPop(int type, char *str, int index)
+void writePushPop(int type, char *str, int index, FILE *fw)
 {
     const char *push_constant = "@%d\n"
         "D=A\n"
@@ -223,7 +229,6 @@ void writePushPop(int type, char *str, int index)
                 strcat(buffer, down_push);
                 fprintf(fw, buffer, 3+index);
             } else if (strcmp(str, "static") == 0) {
-                //printf("%s\n", getFileName(filename));
                 fprintf(fw, "@%s.%d\n", getFileName(filename), index);
                 fprintf(fw, "%s", down_push);
             }
@@ -260,50 +265,126 @@ void writePushPop(int type, char *str, int index)
     }
 }
 
+void code_generator(const char *vmfilename, FILE *fw)
+{
+    //printf("rrr%s\n", vmfilename);
+    FILE *fp = fopen(vmfilename, "r");
+
+    char *lineptr = buffer;
+    size_t linecap = BUFFERLEN;
+    int i;
+    while((i = getline(&lineptr, &linecap, fp)) > 0) {
+        char *line = parse_line(lineptr, i);
+        //printf("%s\n", line);
+        if (strlen(line) > 1) {
+            int type = commandType(line);
+            switch(type) {
+                case C_ARITHMETIC:
+                    writeArithmetic(arg1(line, C_ARITHMETIC), fw);
+                    if (strcmp(arg1(line, C_ARITHMETIC), "lt") == 0)
+                        lt_counter++;
+                    if (strcmp(arg1(line, C_ARITHMETIC), "eq") == 0)
+                        eq_counter++;
+                    if (strcmp(arg1(line, C_ARITHMETIC), "gt") == 0)
+                        gt_counter++;
+                    //                         printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
+                    break;
+                case C_PUSH:
+                    writePushPop(C_PUSH, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
+                    //                         printf("arg1: %s\n", arg1(line, C_PUSH));
+                    //                         printf("arg2: %d\n", arg2(line, C_PUSH));
+                    break;
+                case C_POP:
+                    writePushPop(C_POP, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
+                    //                         printf("arg1: %s\n", arg1(line, C_POP));
+                    //                         printf("arg2: %d\n", arg2(line, C_POP));
+                    break;
+            }
+        }
+    }
+    fclose(fp);
+    fclose(fw);
+}
+
 int main(int argc, const char *argv[])
 {
     if (argc < 2)
         printf("usage: ./a.out <name of file or directory>");
     else {
-        fp = fopen(argv[1], "r");
-        fw = fopen(setFileName(argv[1]), "w");
+        if (is_regular_file(argv[1])) {
+            FILE *fw = fopen(setFileName(argv[1]), "w");
+            code_generator(argv[1], fw);
+        } else {
+            DIR *dirp;
+            struct dirent *dp;
+            dirp = opendir(argv[1]);
+            FILE *fw;
+            int has_created = 0;
+            if (dirp == NULL) {
+                fprintf(stderr, "opendir failed on '%s'", argv[1]);
+                return EXIT_FAILURE;
+            }
+            // only one .asm for multiple files in the directory
+            for (;;) {
+                errno = 0;
+                dp = readdir(dirp);
+                if (dp == NULL)
+                    break;
+                if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+                    continue;
 
-        char *lineptr = buffer;
-        size_t linecap = BUFFERLEN;
-        int i;
-        while((i = getline(&lineptr, &linecap, fp)) > 0) {
-            char *line = parse_line(lineptr, i);
-            if (strlen(line) > 1) {
-                int type = commandType(line);
-                switch(type) {
-                    case C_ARITHMETIC:
-                        writeArithmetic(arg1(line, C_ARITHMETIC));
-                        if (strcmp(arg1(line, C_ARITHMETIC), "lt") == 0)
-                            lt_counter++;
-                        if (strcmp(arg1(line, C_ARITHMETIC), "eq") == 0)
-                            eq_counter++;
-                        if (strcmp(arg1(line, C_ARITHMETIC), "gt") == 0)
-                            gt_counter++;
-//                         printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
-                        break;
-                    case C_PUSH:
-                        writePushPop(C_PUSH, arg1(line, C_PUSH), arg2(line, C_PUSH));
-//                         printf("arg1: %s\n", arg1(line, C_PUSH));
-//                         printf("arg2: %d\n", arg2(line, C_PUSH));
-                        break;
-                    case C_POP:
-                        writePushPop(C_POP, arg1(line, C_PUSH), arg2(line, C_PUSH));
-//                         printf("arg1: %s\n", arg1(line, C_POP));
-//                         printf("arg2: %d\n", arg2(line, C_POP));
-                        break;
+                if (is_vmfile(dp->d_name)) {
+                    if (has_created == 0) {
+                        char *ptr = fetch_filename(argv[1], dp->d_name);
+                        while(*ptr++ != '.');
+                        strcpy(ptr, "asm");
+                        printf("write vmfile: %s\n", buffer);
+                        fw = fopen(buffer, "w");
+                        has_created = 1;
+                    }
+                    // set filename for static segment
+                    strcpy(filename, fetch_filename(argv[1], dp->d_name));
+                    code_generator(filename, fw);
                 }
+            }
+            if (errno != 0) {
+                fprintf(stderr, "readdir");
+                return EXIT_FAILURE;
+            }
+            if (closedir(dirp) == -1) {
+                fprintf(stderr, "closedir");
+                return EXIT_FAILURE;
             }
         }
     }
 
-    fclose(fp);
-    fclose(fw);
     return 0;
+}
+
+// 1 if it's a regular file
+// 0 if not (maybe directory or device or sth else
+int is_regular_file(const char *path)
+{
+    struct stat path_stat;
+    stat(path, &path_stat);
+    return S_ISREG(path_stat.st_mode);
+}
+
+// check whether the file is a vm file
+int is_vmfile(const char *name)
+{
+    while(*name++ != '.' && *name) ;
+    return strncmp(name, "vm", 3) == 0 ? 1 : 0;
+}
+
+char * fetch_filename(const char * path, const char * name)
+{
+    strcpy(buffer, path);
+    if (buffer[strlen(buffer)-1] != '/') {
+        strcat(buffer, "/");
+    }
+    strcat(buffer, name);
+    return buffer;
 }
 
 // ignore all spaces, comments, and '\n'
