@@ -21,6 +21,8 @@
     A=M
     M=-1
     (end$lt$1)
+    @SP
+    M=M+1
 
 ### eq:
 
@@ -42,6 +44,8 @@
     A=M
     M=-1
     (end$eq$1)      // change end eq
+    @SP
+    M=M+1
 
 ### gt is the same as eq and lt
 
@@ -79,9 +83,6 @@
     @SP
     M=M+1
 
-### pop static 8
-
-
 ### static
 
 When a new symbol is encountered for the first time in an assembly program,
@@ -108,3 +109,43 @@ pop static 8
 	D=M
 	@Xxx.8
 	M=D
+
+### Read multiple flies
+First use `stat` to check whether it's a directory or a regular file.
+Once it's a directory, use `opendir and readdir` to get the name of the file.
+
+The following example came from TLPI listing 18-2: Scanning a direcory.
+
+Ex:
+    DIR *dirp;
+    struct dirent *dp;
+    Boolean isCurrent;
+
+    isCurrent = strcmp(dirpath, ".") == 0;
+
+    dirp = opendir(dirpath);
+    if (dirp == NULL) {
+        errMsg("opendir failed on '%s'", dirpath);
+        return;
+    }
+    /* For each entry in this directory, print directory + filename */
+
+    for(;;) {
+        errno = 0;
+        dp = readdir(dirp);         // each call to readdir reads the next directory entry
+                                    // from the directory stream referred to by dirp and
+                                    // returns a pointer to a statically allocated structure
+                                    // of type dirent
+        if (dp == NULL)
+            break;
+        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+            continue;
+        if (!isCurrent)
+            printf("%s/", dirpath);
+        printf("%s\n", dp->d_name);
+    }
+    if (errno != 0)
+        errExit("readdir");
+    if (closedir(dirp) == -1)
+        errMsg("closedir");
+
