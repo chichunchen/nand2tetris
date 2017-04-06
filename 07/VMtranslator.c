@@ -35,11 +35,34 @@ const char *pop_2_args = "@SP\n"
                          "AM=M-1\n"
                          "D=M\n"
                          "@SP\n"
-                         "M=M-1\n"
-                         "A=M\n"
+                         "AM=M-1\n"
                          "%s"
                          "@SP\n"
                          "M=M+1\n";
+static int lt_counter = 0;
+static int eq_counter = 0;
+static int gt_counter = 0;
+
+const char *compare = "@SP\n"
+                      "AM=M-1\n"
+                      "D=M\n"
+                      "@SP\n"
+                      "AM=M-1\n"
+                      "D=M-D\n"
+                      "@true$%s$%d\n"     // %s=lt,eq,gt %d=number
+                      "D;%s\n"           // JLT,JEQ, or JGT
+                      "@SP\n"
+                      "A=M\n"
+                      "M=0\n"
+                      "@end$%s$%d\n"      // number
+                      "0;JMP\n"
+                      "(true$%s$%d)\n"    // number
+                      "@SP\n"
+                      "A=M\n"
+                      "M=-1\n"
+                      "(end$%s$%d)\n"
+                      "@SP\n"
+                      "M=M+1\n";
 
 FILE *fp, *fw;
 char buffer[BUFFERLEN];
@@ -68,7 +91,7 @@ char *setFileName(const char *arg)
 }
 
 // get filename from path
-char * getFileName(char *name)
+char *getFileName(char *name)
 {
     int last = 0;
     int i;
@@ -89,16 +112,49 @@ char * getFileName(char *name)
 
 void writeArithmetic(char *str)
 {
-    char *arith_content[] = {
-        "M=D+M\n",          // add
+    const char *arith_content[] = {       // Since we fetch value from stack(which is LIFO), M is arg1, D is arg2
+        "M=M+D\n",          // add
         "M=M-D\n",          // sub
+        compare,          // lt
+        compare,          // eq
+        compare,          // gt
+        "@SP\nA=M-1\nM=-M\n",          // neg
+        "M=M&D\n",                     // and
+        "M=M|D\n",                     // or
+        "@SP\nA=M-1\nM=!M\n",          // not
     };
-    int i;
-    for (i = 0; i < ARITHMETICS_NUM; i++) {
-        if (strcmp(str, arithmetics[i]) == 0) {
-            strcpy(buffer, pop_2_args);
-            fprintf(fw, buffer, arith_content[i]);
-        }
+    if (strcmp(str, "add") == 0) {
+        fprintf(fw, pop_2_args, arith_content[0]);
+    }
+    else if (strcmp(str, "sub") == 0) {
+        fprintf(fw, pop_2_args, arith_content[1]);
+    }
+    else if (strcmp(str, "lt") == 0) {
+        fprintf(fw, arith_content[2], "lt", lt_counter, "JLT",
+                "lt", lt_counter, "lt", lt_counter, "lt", lt_counter);
+        //static_counter++;
+    }
+    else if (strcmp(str, "eq") == 0) {
+        fprintf(fw, arith_content[2], "eq", eq_counter, "JEQ",
+                "eq", eq_counter, "eq", eq_counter, "eq", eq_counter);
+        //static_counter++;
+    }
+    else if (strcmp(str, "gt") == 0) {
+        fprintf(fw, arith_content[2], "gt", gt_counter, "JGT",
+                "gt", gt_counter, "gt", gt_counter, "gt", gt_counter);
+        //static_counter++;
+    }
+    else if (strcmp(str, "and") == 0) {
+        fprintf(fw, pop_2_args, arith_content[6]);
+    }
+    else if (strcmp(str, "or") == 0) {
+        fprintf(fw, pop_2_args, arith_content[7]);
+    }
+    else if (strcmp(str, "neg") == 0) {
+        fprintf(fw, "%s", arith_content[5]);
+    }
+    else if (strcmp(str, "not") == 0) {
+        fprintf(fw, "%s", arith_content[8]);
     }
 
 }
@@ -123,7 +179,7 @@ void writePushPop(int type, char *str, int index)
                       "@SP\n"
                       "M=M+1\n";
     const char *push_temp_pointer = "@R%d\n";
-    char *pop_temp_pointer =  "@SP\n"
+    const char *pop_temp_pointer =  "@SP\n"
                               "A=M-1\n"
                               "D=M\n"
                               "@R%d\n"
@@ -222,6 +278,12 @@ int main(int argc, const char *argv[])
                 switch(type) {
                     case C_ARITHMETIC:
                         writeArithmetic(arg1(line, C_ARITHMETIC));
+                        if (strcmp(arg1(line, C_ARITHMETIC), "lt") == 0)
+                            lt_counter++;
+                        if (strcmp(arg1(line, C_ARITHMETIC), "eq") == 0)
+                            eq_counter++;
+                        if (strcmp(arg1(line, C_ARITHMETIC), "gt") == 0)
+                            gt_counter++;
 //                         printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
                         break;
                     case C_PUSH:

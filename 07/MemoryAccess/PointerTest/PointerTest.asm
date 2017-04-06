@@ -82,9 +82,8 @@ M=M+1
 AM=M-1
 D=M
 @SP
-M=M-1
-A=M
-M=D+M
+AM=M-1
+M=M+D
 @SP
 M=M+1
 @THIS
@@ -101,8 +100,7 @@ M=M+1
 AM=M-1
 D=M
 @SP
-M=M-1
-A=M
+AM=M-1
 M=M-D
 @SP
 M=M+1
@@ -124,8 +122,7 @@ M=M+1
 AM=M-1
 D=M
 @SP
-M=M-1
-A=M
-M=D+M
+AM=M-1
+M=M+D
 @SP
 M=M+1

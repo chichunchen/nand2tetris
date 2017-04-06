@@ -68,22 +68,23 @@
 
 
 ### push constant x:
-@x
-D=A
-// put x to the top of stack
-@SP
-A=M
-M=D
-// top++
-@SP
-M=M+1
+
+    @x
+    D=A
+    // put x to the top of stack
+    @SP
+    A=M
+    M=D
+    // top++
+    @SP
+    M=M+1
 
 ### pop static 8
 
 
 ### static
 
-when a new symbol is encountered for the first time in an assembly program,
+When a new symbol is encountered for the first time in an assembly program,
 the assembler allocates a new RAM address to it, starting at address `16`.
 
 What we have to do is to print out the assembly code below, the assembler
