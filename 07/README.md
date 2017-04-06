@@ -1,0 +1,109 @@
+## Ch7 VMtranslator
+
+### lt:
+
+    // if (x-y) lt 0, then -1, else 0
+    @SP
+    AM=M-1
+    D=M     // D=arg2
+    @SP
+    AM=M-1
+    D=M-D   // D=arg1-arg2, if (arg1-arg2) < 0, then true
+    @true$lt$1
+    D;JLT
+    @SP     // if not lt
+    A=M
+    M=0
+    @end$lt$1
+    0;JMP
+    (true$lt$1)
+    @SP
+    A=M
+    M=-1
+    (end$lt$1)
+
+### eq:
+
+    @SP
+    AM=M-1
+    D=M
+    @SP
+    AM=M-1
+    D=M-D
+    @true$eq$1      // change true eq
+    D;JEQ           // JEQ
+    @SP
+    A=M
+    M=0
+    @end$eq$1       // change end eq
+    0;JMP
+    (true$eq$1)     // change true eq
+    @SP
+    A=M
+    M=-1
+    (end$eq$1)      // change end eq
+
+### gt is the same as eq and lt
+
+### neg:
+
+    @SP
+    A=M-1
+    M=-M
+
+### not:
+
+    @SP
+    A=M-1
+    M=!M
+
+### and:
+
+    @SP
+    AM=M-1
+    D=M
+    @SP
+    AM=M-1
+    M=M&D   // or: M=M|D
+
+
+### push constant x:
+@x
+D=A
+// put x to the top of stack
+@SP
+A=M
+M=D
+// top++
+@SP
+M=M+1
+
+### pop static 8
+
+
+### static
+
+when a new symbol is encountered for the first time in an assembly program,
+the assembler allocates a new RAM address to it, starting at address `16`.
+
+What we have to do is to print out the assembly code below, the assembler
+will translate the symbol to address.
+
+filename: Xxx.vm
+push static 3
+
+    @Xxx.3
+    D=M
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+
+pop static 8
+
+	@SP
+	A=M-1
+	D=M
+	@Xxx.8
+	M=D

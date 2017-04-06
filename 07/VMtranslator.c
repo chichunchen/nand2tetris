@@ -4,7 +4,6 @@
 #include <ctype.h>
 
 #define BUFFERLEN       1024
-#define TOK_LEN         16
 #define ARITHMETICS_NUM 9
 #define TYPES_NUM       8
 
@@ -44,6 +43,7 @@ const char *pop_2_args = "@SP\n"
 
 FILE *fp, *fw;
 char buffer[BUFFERLEN];
+char filename[100];
 
 // parser
 char * parse_line(char *str, int len);
@@ -53,15 +53,37 @@ int arg2(char *command, int type);
 
 // code generator
 char *setFileName(const char *filename);
+char *getFileName(char *name);
 void writeArithmetic(char *str);
 void writePushPop(int type, char *str, int index);
 
-char *setFileName(const char *filename)
+char *setFileName(const char *arg)
 {
-    strcpy(buffer, filename);
+    strcpy(filename, arg);
+    strcpy(buffer, arg);
     char *writeptr = buffer;
     while(*writeptr++ != '.') ;
     strcpy(writeptr, "asm");
+    return buffer;
+}
+
+// get filename from path
+char * getFileName(char *name)
+{
+    int last = 0;
+    int i;
+    for(i = 0; i < strlen(name); i++) {
+        if (name[i] == '/')
+            last = i;
+    }
+    if (last == 0)
+        return name;
+    char *ptr = &name[last]+1;
+    strcpy(buffer, ptr);
+    ptr = buffer;
+    while(*ptr != '.')
+        ptr++;
+    *ptr = '\0';
     return buffer;
 }
 
@@ -85,22 +107,22 @@ void writeArithmetic(char *str)
 // arithmetic command
 void writePushPop(int type, char *str, int index)
 {
-    char *push_constant = "@%d\n"
+    const char *push_constant = "@%d\n"
         "D=A\n"
         "@SP\n"
         "A=M\n"
         "M=D\n"
         "@SP\n"
         "M=M+1\n";
-    char *up_push = "@%s\n"
+    const char *up_push = "@%s\n"
                     "A=M\n";
-    char *down_push = "D=M\n"
+    const char *down_push = "D=M\n"
                       "@SP\n"
                       "A=M\n"
                       "M=D\n"
                       "@SP\n"
                       "M=M+1\n";
-    char *push_temp_pointer = "@R%d\n";
+    const char *push_temp_pointer = "@R%d\n";
     char *pop_temp_pointer =  "@SP\n"
                               "A=M-1\n"
                               "D=M\n"
@@ -108,13 +130,13 @@ void writePushPop(int type, char *str, int index)
                               "M=D\n"
                               "@SP\n"
                               "M=M-1\n";
-    char *up_pop =   "@SP\n"
+    const char *up_pop =   "@SP\n"
                      "A=M-1\n"
                      "D=M\n"
                      "@%s\n"          // the string should be local, argument, this, that
                      "A=M\n";         // after A=M might be several A=A+1, considering the value of arg2
-    char *repeat = "A=A+1\n";
-    char *down_pop = "M=D\n"
+    const char *repeat = "A=A+1\n";
+    const char *down_pop = "M=D\n"
                      "@SP\n"
                      "M=M-1\n";
     const char * map_1[] = {
@@ -144,6 +166,10 @@ void writePushPop(int type, char *str, int index)
                 strcpy(buffer, push_temp_pointer);
                 strcat(buffer, down_push);
                 fprintf(fw, buffer, 3+index);
+            } else if (strcmp(str, "static") == 0) {
+                //printf("%s\n", getFileName(filename));
+                fprintf(fw, "@%s.%d\n", getFileName(filename), index);
+                fprintf(fw, "%s", down_push);
             }
         }
     }
@@ -151,7 +177,6 @@ void writePushPop(int type, char *str, int index)
         int i;
         for (i = 0; i < 4; i++) {
             if (strcmp(str, map_1[i]) == 0) {
-                //printf("ggg %s, len=%d\n", str, strlen(str));
                 strcpy(buffer, up_pop);
                 int j;
                 for (j = 0; j < index; j++) {
@@ -160,13 +185,21 @@ void writePushPop(int type, char *str, int index)
                 strcat(buffer, down_pop);
                 fprintf(fw, buffer, default_register[i+1]); // skip SP
             }
-            if (strcmp(str, "temp") == 0) {
-                strcpy(buffer, pop_temp_pointer);
-                fprintf(fw, buffer, 5+index);
-            } else if (strcmp(str, "pointer") == 0) {
-                strcpy(buffer, pop_temp_pointer);
-                fprintf(fw, buffer, 3+index);
-            }
+        }
+        if (strcmp(str, "temp") == 0) {
+            strcpy(buffer, pop_temp_pointer);
+            fprintf(fw, buffer, 5+index);
+        } else if (strcmp(str, "pointer") == 0) {
+            strcpy(buffer, pop_temp_pointer);
+            fprintf(fw, buffer, 3+index);
+        } else if (strcmp(str, "static") == 0) {
+            char *static_pop = "@SP\n"
+                               "A=M-1\n"
+                               "D=M\n"
+                               "@%s\n"        // @Xxx.index
+                               "%s";
+            sprintf(buffer, "%s.%d", getFileName(filename), index);
+            fprintf(fw, static_pop, buffer, down_pop);
         }
     }
 }
