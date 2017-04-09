@@ -117,6 +117,7 @@ Once it's a directory, use `opendir and readdir` to get the name of the file.
 The following example came from TLPI listing 18-2: Scanning a direcory.
 
 Ex:
+
     DIR *dirp;
     struct dirent *dp;
     Boolean isCurrent;
