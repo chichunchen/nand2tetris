@@ -33,7 +33,7 @@ const char *arithmetics[] = {
 const char *types[] = {
     "push", "pop",
     "label", "goto", "if-goto",
-    "function", "call", "return"
+    "function", "return", "call"
 };
 
 const char *pop_2_args = "@SP\n"
@@ -44,9 +44,43 @@ const char *pop_2_args = "@SP\n"
                          "%s"
                          "@SP\n"
                          "M=M+1\n";
+const char *set_constant = "@%d\n"
+                           "D=A\n";
+const char *fetch_sp_top = "@SP\n"
+                           "A=M\n"
+                           "M=D\n"
+                           "@SP\n"
+                           "M=M+1\n";
+const char *up_push = "@%s\n"
+                      "A=M\n";
+const char *down_push = "D=M\n"
+                  "@SP\n"
+                  "A=M\n"
+                  "M=D\n"
+                  "@SP\n"
+                  "M=M+1\n";
+const char *push_temp_pointer = "@R%d\n";
+const char *pop_temp_pointer =  "@SP\n"
+                          "A=M-1\n"
+                          "D=M\n"
+                          "@R%d\n"
+                          "M=D\n"
+                          "@SP\n"
+                          "M=M-1\n";
+const char *up_pop =   "@SP\n"
+                       "A=M-1\n"
+                       "D=M\n"
+                       "@%s\n"          // the string should be local, argument, this, that
+                       "A=M\n";         // after A=M might be several A=A+1, considering the value of arg2
+const char *repeat = "A=A+1\n";
+const char *down_pop = "M=D\n"
+                 "@SP\n"
+                 "M=M-1\n";
 static int lt_counter = 0;
 static int eq_counter = 0;
 static int gt_counter = 0;
+static int ret_call_counter = 0;
+static int ret_addr_counter = 0;
 
 const char *compare = "@SP\n"
                       "AM=M-1\n"
@@ -91,6 +125,9 @@ void writeInit();
 void writeLabel(char *label, FILE *fw);
 void writeGoto(char *label, FILE *fw);
 void writeIf(char *label, FILE *fw);
+void writeCall(char *functionName, int numArgs, FILE *fw);
+void writeReturn(FILE *fw);
+void writeFunction(char *functionName, int numLocals, FILE *fw);
 
 // set filename to path/xxx.asm
 char *setFileName(const char *arg)
@@ -121,6 +158,10 @@ char *getFileName(char *name)
         ptr++;
     *ptr = '\0';
     return buffer;
+}
+
+void writeInit()
+{
 }
 
 void writeArithmetic(char *str, FILE *fw)
@@ -173,44 +214,14 @@ void writeArithmetic(char *str, FILE *fw)
 // arithmetic command
 void writePushPop(int type, char *str, int index, FILE *fw)
 {
-    const char *push_constant = "@%d\n"
-        "D=A\n"
-        "@SP\n"
-        "A=M\n"
-        "M=D\n"
-        "@SP\n"
-        "M=M+1\n";
-    const char *up_push = "@%s\n"
-                    "A=M\n";
-    const char *down_push = "D=M\n"
-                      "@SP\n"
-                      "A=M\n"
-                      "M=D\n"
-                      "@SP\n"
-                      "M=M+1\n";
-    const char *push_temp_pointer = "@R%d\n";
-    const char *pop_temp_pointer =  "@SP\n"
-                              "A=M-1\n"
-                              "D=M\n"
-                              "@R%d\n"
-                              "M=D\n"
-                              "@SP\n"
-                              "M=M-1\n";
-    const char *up_pop =   "@SP\n"
-                     "A=M-1\n"
-                     "D=M\n"
-                     "@%s\n"          // the string should be local, argument, this, that
-                     "A=M\n";         // after A=M might be several A=A+1, considering the value of arg2
-    const char *repeat = "A=A+1\n";
-    const char *down_pop = "M=D\n"
-                     "@SP\n"
-                     "M=M-1\n";
     const char * map_1[] = {
         "local", "argument", "this", "that"
     };
     if (type == C_PUSH) {
         if (strcmp(str, "constant") == 0) {
-            fprintf(fw, push_constant, index);
+            strcpy(buffer, set_constant);
+            strcat(buffer, fetch_sp_top);
+            fprintf(fw, buffer, index);
         } else {
             int i;
             for (i = 0; i < 4; i++) {
@@ -295,9 +306,157 @@ void writeIf(char *label, FILE *fw)
     fprintf(fw, if_statement, label);
 }
 
+void writeCall(char *functionName, int numArgs, FILE *fw)
+{
+    sprintf(buffer, "RET_ADDRESS_CALL%d", ret_call_counter);
+
+    // push return address
+    fprintf(fw, up_push, buffer);
+    fprintf(fw, "%s", down_push);
+
+    // push LCL
+    fprintf(fw, "@LCL\n%s", down_push);
+    // push ARG
+    fprintf(fw, "@ARG\n%s", down_push);
+    // push THIS
+    fprintf(fw, "@THIS\n%s", down_push);
+    // push THAT
+    fprintf(fw, "@THAT\n%s", down_push);
+    // ARG = SP-n-5
+    fprintf(fw, "@SP\nD=M\n");
+    int j;
+    for (j = 0; j < numArgs+5; j++) {
+        fprintf(fw, "D=D-1\n");
+    }
+    fprintf(fw, "@ARG\nM=D\n");
+    // LCL = SP
+    const char *lcl_sp = "@SP\n"
+                         "D=M\n"
+                         "@LCL\n"
+                         "M=D\n";
+    fprintf(fw, "%s", lcl_sp);
+
+    // goto f
+    writeGoto(functionName, fw);
+
+    // declare label
+    writeLabel(buffer, fw);
+    ret_call_counter++;
+}
+
+void writeReturn(FILE *fw)
+{
+    // push ret_address
+    char ret_addr[100], frame[100];
+    sprintf(frame, "FRAME_%d", ret_addr_counter);
+    sprintf(ret_addr, "RET_ADDR_%d", ret_addr_counter);
+
+    // frame = lcl
+    const char *setframe = "@LCL\n"
+                           "D=M\n"
+                           "@%s\n" // frame
+                           "M=D\n";
+    fprintf(fw, setframe, frame);
+
+    // ret = *(frame-5)
+    const char *set_ret = "@%s\n"       // frame_#
+                          "D=M\n"
+                          "D=D-1\n"     // Frame-5
+                          "D=D-1\n"
+                          "D=D-1\n"
+                          "D=D-1\n"
+                          "D=D-1\n"
+                          "A=D\n"       // point to &RAM[FRAME-5]
+                          "D=M\n"
+                          "@%s\n"
+                          "M=D\n";
+    fprintf(fw, set_ret, frame, ret_addr);
+
+    // *ARG = pop()
+    const char *set_ret_for_caller = "@SP\n"
+                                     "A=M-1\n"
+                                     "D=M\n"
+                                     "@ARG\n"
+                                     "A=M\n"
+                                     "M=D\n"
+                                     "@SP\n"
+                                     "M=M-1\n";
+    fprintf(fw, "%s", set_ret_for_caller);
+
+    // SP = ARG+1
+    const char *set_sp = "@ARG\n"
+                         "D=M\n"
+                         "D=D+1\n"
+                         "@SP\n"
+                         "M=D\n";
+    fprintf(fw, "%s", set_sp);
+
+    // THAT = *(FRAME-1)
+    const char *set_that = "@%s\n"
+                           "D=M\n"
+                           "D=D-1\n"     //Frame-1
+                           "A=D\n"       // point to &RAM[FRAME-1]
+                           "D=M\n"
+                           "@%s\n"
+                           "M=D\n";
+    fprintf(fw, set_that, frame, "THAT");
+
+    // THIS = *(FRAME-2)
+    const char *set_this = "@%s\n"
+                           "D=M\n"
+                           "D=D-1\n"     //Frame-2
+                           "D=D-1\n"
+                           "A=D\n"       // point to &RAM[FRAME-2]
+                           "D=M\n"
+                           "@%s\n"
+                           "M=D\n";
+    fprintf(fw, set_this, frame, "THIS");
+
+    // ARG = *(FRAME-3)
+    const char *set_arg =  "@%s\n"
+                           "D=M\n"
+                           "D=D-1\n"     //Frame-3
+                           "D=D-1\n"
+                           "D=D-1\n"
+                           "A=D\n"       // point to &RAM[FRAME-3]
+                           "D=M\n"
+                           "@%s\n"
+                           "M=D\n";
+    fprintf(fw, set_arg, frame, "ARG");
+
+    // LCL = *(FRAME-4)
+    const char *set_lcl =  "@%s\n"
+                           "D=M\n"
+                           "D=D-1\n"     //Frame-4
+                           "D=D-1\n"
+                           "D=D-1\n"
+                           "D=D-1\n"
+                           "A=D\n"       // point to &RAM[FRAME-4]
+                           "D=M\n"
+                           "@%s\n"
+                           "M=D\n";
+    fprintf(fw, set_lcl, frame, "LCL");
+
+    const char *goto_ret_addr = "@%s\n"
+                                "A=M\n"  // jump to the content of ret_addr
+                                "0;JMP";
+
+    fprintf(fw, goto_ret_addr, ret_addr);
+    ret_addr_counter++;
+}
+
+void writeFunction(char *functionName, int numLocals, FILE *fw)
+{
+    writeLabel(functionName, fw);
+    int i;
+    for(i = 0; i < numLocals; i++) {
+        writePushPop(C_PUSH, "constant", 0, fw);
+        //writePushPop(C_POP, "local", i, fw);
+    }
+}
+
 void code_generator(const char *vmfilename, FILE *fw)
 {
-    //printf("rrr%s\n", vmfilename);
     FILE *fp = fopen(vmfilename, "r");
 
     char *lineptr = buffer;
@@ -305,9 +464,9 @@ void code_generator(const char *vmfilename, FILE *fw)
     int i;
     while((i = getline(&lineptr, &linecap, fp)) > 0) {
         char *line = parse_line(lineptr, i);
-        //printf("%s\n", line);
         if (strlen(line) > 1) {
             int type = commandType(line);
+            //printf("%s, type:%d\n", line, commandType(line));
             switch(type) {
                 case C_ARITHMETIC:
                     writeArithmetic(arg1(line, C_ARITHMETIC), fw);
@@ -317,33 +476,35 @@ void code_generator(const char *vmfilename, FILE *fw)
                         eq_counter++;
                     if (strcmp(arg1(line, C_ARITHMETIC), "gt") == 0)
                         gt_counter++;
-                    //                         printf("arg1: %s\n", arg1(line, C_ARITHMETIC));
                     break;
                 case C_PUSH:
                     writePushPop(C_PUSH, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
-                    //                         printf("arg1: %s\n", arg1(line, C_PUSH));
-                    //                         printf("arg2: %d\n", arg2(line, C_PUSH));
                     break;
                 case C_POP:
                     writePushPop(C_POP, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
-                    //                         printf("arg1: %s\n", arg1(line, C_POP));
-                    //                         printf("arg2: %d\n", arg2(line, C_POP));
                     break;
                 case C_LABEL:
                     //printf("arg1: %s\n", arg1(line, C_POP));
                     writeLabel(arg1(line, C_LABEL), fw);
                     break;
                 case C_GOTO:
-                    writeGoto(arg1(line, C_LABEL), fw);
+                    writeGoto(arg1(line, C_GOTO), fw);
                     break;
                 case C_IF:
-                    writeIf(arg1(line, C_LABEL), fw);
+                    writeIf(arg1(line, C_IF), fw);
                     break;
                 case C_FUNCTION:
+                    printf("arg1: %s\n", arg1(line, C_POP));
+                    writeFunction(arg1(line, C_FUNCTION), arg2(line, C_FUNCTION), fw);
                     break;
                 case C_RETURN:
+                    printf("rrr arg1: %s\n", arg1(line, C_RETURN));
+                    writeReturn(fw);
                     break;
                 case C_CALL:
+                    printf("ccc arg1: %s\n", arg1(line, C_RETURN));
+                    //printf("arg1: %s\n", arg1(line, C_CALL));
+                    //writeCall(arg1(line, C_CALL), arg2(line, C_CALL), fw);
                     break;
             }
         }
@@ -475,7 +636,7 @@ int commandType(char *line)
 // In the case of C_ARITHMETIC, the command itself is returned.
 char *arg1(char *command, int type)
 {
-    if (type == C_ARITHMETIC) {
+    if (type == C_ARITHMETIC || type == C_RETURN) {
         return command;
     }
     char *ptr = command;
