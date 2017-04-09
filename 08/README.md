@@ -7,7 +7,7 @@ jump to execute the command just after label
     0;JMP
 
 ### if-goto label
-cond = pop;     // pop the truth value on the stack
+cond = pop;     // pop the cond value on the stack
 if cond jump to execute the command just after label
 
     @SP
@@ -16,7 +16,7 @@ if cond jump to execute the command just after label
     @SP
     M=M-1   // SP--
     @label
-    D;JLT   // if (-1) then jump
+    D;JNE   // if != 0 then jump
 
 ### label label
 label declaration command

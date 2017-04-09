@@ -1,0 +1,2 @@
+main:
+	gcc ./VMtranslator.c
