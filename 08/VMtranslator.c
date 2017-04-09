@@ -21,6 +21,12 @@ enum command_type {
     C_RETURN,
     C_CALL
 };
+
+enum file_type {
+    T_FILE,
+    T_FOLDER
+};
+
 const char *default_register[] = {
     "SP", "LCL", "ARG", "THIS", "THAT"
 };
@@ -117,11 +123,11 @@ int arg2(char *command, int type);
 
 // code generator
 void code_generator(const char *vmfilename, FILE *fw);
-char *setFileName(const char *filename);
+char *setFileName(const char *filename, int type);
 char *getFileName(char *name);
 void writeArithmetic(char *str, FILE *fw);
 void writePushPop(int type, char *str, int index, FILE *fw);
-void writeInit();
+void writeInit(FILE *fw);
 void writeLabel(char *label, FILE *fw);
 void writeGoto(char *label, FILE *fw);
 void writeIf(char *label, FILE *fw);
@@ -130,14 +136,38 @@ void writeReturn(FILE *fw);
 void writeFunction(char *functionName, int numLocals, FILE *fw);
 
 // set filename to path/xxx.asm
-char *setFileName(const char *arg)
+char *setFileName(const char *arg, int type)
 {
-    strcpy(filename, arg);
-    strcpy(buffer, arg);
-    char *writeptr = buffer;
-    while(*writeptr++ != '.') ;
-    strcpy(writeptr, "asm");
-    return buffer;
+    if (type == T_FILE) {
+        strcpy(filename, arg);
+        char *writeptr = filename;
+        while(*writeptr++ != '.') ;
+        strcpy(writeptr, "asm");
+        printf("sss %s\n", filename);
+        return filename;
+    } else {
+        // extract the folder's name
+        int last = 0;
+        int index;
+        for (index = 0; index < strlen(arg); index++) {
+            if (arg[index] == '/' && isalnum(arg[index+1]) == 1)
+                last = index;
+        }
+        strcpy(buffer, &arg[last+1]);
+        if (buffer[strlen(buffer)-1] == '/') {
+            buffer[strlen(buffer)-1] = '\0';
+            strcat(buffer, ".asm");
+            strcpy(filename, arg);
+            strcat(filename, buffer);
+        } else {
+            strcat(buffer, ".asm");
+            strcpy(filename, arg);
+            strcat(filename, "/");
+            strcat(filename, buffer);
+        }
+        //printf("sss %s\n", filename);
+        return filename;
+    }
 }
 
 // get xxx from path/xxx.asm
@@ -160,8 +190,14 @@ char *getFileName(char *name)
     return buffer;
 }
 
-void writeInit()
+void writeInit(FILE *fw)
 {
+    const char *init_sp = "@256\n"
+                          "D=A\n"
+                          "@SP\n"
+                          "M=D\n";
+    fprintf(fw, "%s", init_sp);
+    writeCall("Sys.init", 0, fw);
 }
 
 void writeArithmetic(char *str, FILE *fw)
@@ -311,8 +347,14 @@ void writeCall(char *functionName, int numArgs, FILE *fw)
     sprintf(buffer, "RET_ADDRESS_CALL%d", ret_call_counter);
 
     // push return address
-    fprintf(fw, up_push, buffer);
-    fprintf(fw, "%s", down_push);
+    const char *push_ret_addr = "@%s\n"
+                           "D=A\n"
+                           "@SP\n"
+                           "A=M\n"
+                           "M=D\n"
+                           "@SP\n"
+                           "M=M+1\n";
+    fprintf(fw, push_ret_addr, buffer);
 
     // push LCL
     fprintf(fw, "@LCL\n%s", down_push);
@@ -439,7 +481,7 @@ void writeReturn(FILE *fw)
 
     const char *goto_ret_addr = "@%s\n"
                                 "A=M\n"  // jump to the content of ret_addr
-                                "0;JMP";
+                                "0;JMP\n";
 
     fprintf(fw, goto_ret_addr, ret_addr);
     ret_addr_counter++;
@@ -451,7 +493,6 @@ void writeFunction(char *functionName, int numLocals, FILE *fw)
     int i;
     for(i = 0; i < numLocals; i++) {
         writePushPop(C_PUSH, "constant", 0, fw);
-        //writePushPop(C_POP, "local", i, fw);
     }
 }
 
@@ -484,7 +525,6 @@ void code_generator(const char *vmfilename, FILE *fw)
                     writePushPop(C_POP, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
                     break;
                 case C_LABEL:
-                    //printf("arg1: %s\n", arg1(line, C_POP));
                     writeLabel(arg1(line, C_LABEL), fw);
                     break;
                 case C_GOTO:
@@ -494,11 +534,9 @@ void code_generator(const char *vmfilename, FILE *fw)
                     writeIf(arg1(line, C_IF), fw);
                     break;
                 case C_FUNCTION:
-                    printf("arg1: %s\n", arg1(line, C_POP));
                     writeFunction(arg1(line, C_FUNCTION), arg2(line, C_FUNCTION), fw);
                     break;
                 case C_RETURN:
-                    printf("rrr arg1: %s\n", arg1(line, C_RETURN));
                     writeReturn(fw);
                     break;
                 case C_CALL:
@@ -519,19 +557,21 @@ int main(int argc, const char *argv[])
         printf("usage: ./a.out <name of file or directory>");
     else {
         if (is_regular_file(argv[1])) {
-            FILE *fw = fopen(setFileName(argv[1]), "w");
+            FILE *fw = fopen(setFileName(argv[1], T_FILE), "w");
             code_generator(argv[1], fw);
         } else {
             DIR *dirp;
             struct dirent *dp;
             dirp = opendir(argv[1]);
-            FILE *fw;
-            int has_created = 0;
+            // only one .asm for multiple files in the directory
+            FILE *fw = fopen(setFileName(argv[1], T_FOLDER), "w");
+            writeInit(fw);
+
             if (dirp == NULL) {
                 fprintf(stderr, "opendir failed on '%s'", argv[1]);
                 return EXIT_FAILURE;
             }
-            // only one .asm for multiple files in the directory
+
             for (;;) {
                 errno = 0;
                 dp = readdir(dirp);
@@ -541,17 +581,8 @@ int main(int argc, const char *argv[])
                     continue;
 
                 if (is_vmfile(dp->d_name)) {
-                    if (has_created == 0) {
-                        char *ptr = fetch_filename(argv[1], dp->d_name);
-                        while(*ptr++ != '.');
-                        strcpy(ptr, "asm");
-                        printf("write vmfile: %s\n", buffer);
-                        fw = fopen(buffer, "w");
-                        has_created = 1;
-                    }
                     // set filename for static segment
-                    strcpy(filename, fetch_filename(argv[1], dp->d_name));
-                    code_generator(filename, fw);
+                    code_generator(fetch_filename(argv[1], dp->d_name), fw);
                 }
             }
             if (errno != 0) {
@@ -591,6 +622,7 @@ char * fetch_filename(const char * path, const char * name)
         strcat(buffer, "/");
     }
     strcat(buffer, name);
+    printf("bbb %s\n", buffer);
     return buffer;
 }
 
