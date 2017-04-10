@@ -580,6 +580,7 @@ int main(int argc, const char *argv[])
 
                 if (is_vmfile(dp->d_name)) {
                     // set filename for static segment
+                    strcpy(filename, fetch_filename(argv[1], dp->d_name));
                     code_generator(fetch_filename(argv[1], dp->d_name), fw);
                 }
             }
