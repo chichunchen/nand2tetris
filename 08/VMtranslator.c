@@ -344,17 +344,16 @@ void writeIf(char *label, FILE *fw)
 
 void writeCall(char *functionName, int numArgs, FILE *fw)
 {
-    sprintf(buffer, "RET_ADDRESS_CALL%d", ret_call_counter);
-
     // push return address
-    const char *push_ret_addr = "@%s\n"
-                           "D=A\n"
-                           "@SP\n"
-                           "A=M\n"
-                           "M=D\n"
-                           "@SP\n"
-                           "M=M+1\n";
-    fprintf(fw, push_ret_addr, buffer);
+    const char *ret_addr_call = "RET_ADDRESS_CALL";
+    const char *push_ret_addr = "@%s%d\n"
+                                "D=A\n"
+                                "@SP\n"
+                                "A=M\n"
+                                "M=D\n"
+                                "@SP\n"
+                                "M=M+1\n";
+    fprintf(fw, push_ret_addr, ret_addr_call, ret_call_counter);
 
     // push LCL
     fprintf(fw, "@LCL\n%s", down_push);
@@ -382,7 +381,10 @@ void writeCall(char *functionName, int numArgs, FILE *fw)
     writeGoto(functionName, fw);
 
     // declare label
-    writeLabel(buffer, fw);
+    printf("lll %s\n", functionName);
+    char ret_label[100];
+    sprintf(ret_label, "%s%d", ret_addr_call, ret_call_counter);
+    writeLabel(ret_label, fw);
     ret_call_counter++;
 }
 
@@ -507,7 +509,6 @@ void code_generator(const char *vmfilename, FILE *fw)
         char *line = parse_line(lineptr, i);
         if (strlen(line) > 1) {
             int type = commandType(line);
-            //printf("%s, type:%d\n", line, commandType(line));
             switch(type) {
                 case C_ARITHMETIC:
                     writeArithmetic(arg1(line, C_ARITHMETIC), fw);
@@ -540,15 +541,11 @@ void code_generator(const char *vmfilename, FILE *fw)
                     writeReturn(fw);
                     break;
                 case C_CALL:
-                    printf("ccc arg1: %s\n", arg1(line, C_RETURN));
-                    //printf("arg1: %s\n", arg1(line, C_CALL));
-                    //writeCall(arg1(line, C_CALL), arg2(line, C_CALL), fw);
+                    writeCall(arg1(line, C_CALL), arg2(line, C_CALL), fw);
                     break;
             }
         }
     }
-    fclose(fp);
-    fclose(fw);
 }
 
 int main(int argc, const char *argv[])
@@ -559,6 +556,7 @@ int main(int argc, const char *argv[])
         if (is_regular_file(argv[1])) {
             FILE *fw = fopen(setFileName(argv[1], T_FILE), "w");
             code_generator(argv[1], fw);
+            fclose(fw);
         } else {
             DIR *dirp;
             struct dirent *dp;
@@ -593,6 +591,7 @@ int main(int argc, const char *argv[])
                 fprintf(stderr, "closedir");
                 return EXIT_FAILURE;
             }
+            fclose(fw);
         }
     }
 
