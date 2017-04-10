@@ -187,8 +187,10 @@ void writePushPop(int type, char *str, int index, FILE *fw)
                 strcat(buffer, down_push);
                 fprintf(fw, buffer, 3+index);
             } else if (strcmp(str, "static") == 0) {
-                fprintf(fw, "@%s.%d\n", getFileName(filename), index);
+                char *name = getFileName(filename);
+                fprintf(fw, "@%s.%d\n", name, index);
                 fprintf(fw, "%s", down_push);
+                free(name);
             }
         }
     }
@@ -217,8 +219,10 @@ void writePushPop(int type, char *str, int index, FILE *fw)
                                "D=M\n"
                                "@%s\n"        // @Xxx.index
                                "%s";
-            sprintf(buffer, "%s.%d", getFileName(filename), index);
+            char *name = getFileName(filename);
+            sprintf(buffer, "%s.%d", name, index);
             fprintf(fw, static_pop, buffer, down_pop);
+            free(name);
         }
     }
 }
@@ -414,43 +418,61 @@ void code_generator(const char *vmfilename, FILE *fw)
     int i;
     while((i = getline(&lineptr, &linecap, fp)) > 0) {
         char *line = parse_line(lineptr, i);
+        char *temp;
         if (strlen(line) > 1) {
             int type = commandType(line);
             switch(type) {
                 case C_ARITHMETIC:
-                    writeArithmetic(arg1(line, C_ARITHMETIC), fw);
-                    if (strcmp(arg1(line, C_ARITHMETIC), "lt") == 0)
+                    temp = arg1(line, C_ARITHMETIC);
+                    writeArithmetic(temp, fw);
+                    if (strcmp(temp, "lt") == 0)
                         lt_counter++;
-                    if (strcmp(arg1(line, C_ARITHMETIC), "eq") == 0)
+                    if (strcmp(temp, "eq") == 0)
                         eq_counter++;
-                    if (strcmp(arg1(line, C_ARITHMETIC), "gt") == 0)
+                    if (strcmp(temp, "gt") == 0)
                         gt_counter++;
+                    free(temp);
                     break;
                 case C_PUSH:
-                    writePushPop(C_PUSH, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
+                    temp = arg1(line, C_PUSH);
+                    writePushPop(C_PUSH, temp, arg2(line, C_PUSH), fw);
+                    free(temp);
                     break;
                 case C_POP:
-                    writePushPop(C_POP, arg1(line, C_PUSH), arg2(line, C_PUSH), fw);
+                    temp = arg1(line, C_POP);
+                    writePushPop(C_POP, arg1(line, C_POP), arg2(line, C_POP), fw);
+                    free(temp);
                     break;
                 case C_LABEL:
-                    writeLabel(arg1(line, C_LABEL), fw);
+                    temp = arg1(line, C_LABEL);
+                    writeLabel(temp, fw);
+                    free(temp);
                     break;
                 case C_GOTO:
-                    writeGoto(arg1(line, C_GOTO), fw);
+                    temp = arg1(line, C_GOTO);
+                    writeGoto(temp, fw);
+                    free(temp);
                     break;
                 case C_IF:
-                    writeIf(arg1(line, C_IF), fw);
+                    temp = arg1(line, C_IF);
+                    writeIf(temp, fw);
+                    free(temp);
                     break;
                 case C_FUNCTION:
-                    writeFunction(arg1(line, C_FUNCTION), arg2(line, C_FUNCTION), fw);
+                    temp = arg1(line, C_FUNCTION);
+                    writeFunction(temp, arg2(line, C_FUNCTION), fw);
+                    free(temp);
                     break;
                 case C_RETURN:
                     writeReturn(fw);
                     break;
                 case C_CALL:
-                    writeCall(arg1(line, C_CALL), arg2(line, C_CALL), fw);
+                    temp = arg1(line, C_CALL);
+                    writeCall(temp, arg2(line, C_CALL), fw);
+                    free(temp);
                     break;
             }
+            free(line);
         }
     }
 }
@@ -487,8 +509,10 @@ int main(int argc, const char *argv[])
 
                 if (is_vmfile(dp->d_name)) {
                     // set filename for static segment
-                    strcpy(filename, fetch_filename(argv[1], dp->d_name));
-                    code_generator(fetch_filename(argv[1], dp->d_name), fw);
+                    char *name = fetch_filename(argv[1], dp->d_name);
+                    strcpy(filename, name);
+                    code_generator(name, fw);
+                    free(name);
                 }
             }
             if (errno != 0) {
