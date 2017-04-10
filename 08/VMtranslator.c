@@ -143,7 +143,7 @@ char *setFileName(const char *arg, int type)
         char *writeptr = filename;
         while(*writeptr++ != '.') ;
         strcpy(writeptr, "asm");
-        printf("sss %s\n", filename);
+        //printf("sss %s\n", filename);
         return filename;
     } else {
         // extract the folder's name
@@ -381,7 +381,7 @@ void writeCall(char *functionName, int numArgs, FILE *fw)
     writeGoto(functionName, fw);
 
     // declare label
-    printf("lll %s\n", functionName);
+    //printf("lll %s\n", functionName);
     char ret_label[100];
     sprintf(ret_label, "%s%d", ret_addr_call, ret_call_counter);
     writeLabel(ret_label, fw);
@@ -622,7 +622,7 @@ char * fetch_filename(const char * path, const char * name)
         strcat(buffer, "/");
     }
     strcat(buffer, name);
-    printf("bbb %s\n", buffer);
+    //printf("bbb %s\n", buffer);
     return buffer;
 }
 
@@ -668,8 +668,16 @@ int commandType(char *line)
 // In the case of C_ARITHMETIC, the command itself is returned.
 char *arg1(char *command, int type)
 {
+    // ignore comments
     if (type == C_ARITHMETIC || type == C_RETURN) {
-        return command;
+        char *temp = malloc(sizeof(char)*BUFFERLEN);
+        int i;
+        int len = strlen(command);
+        for (i = 0; command[i] != ' ' && i < len; i++) {
+            temp[i] = command[i];
+        }
+        temp[i] = '\0';
+        return temp;
     }
     char *ptr = command;
     while(*ptr++ != ' ')
