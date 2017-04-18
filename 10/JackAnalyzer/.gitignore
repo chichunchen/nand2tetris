@@ -3,3 +3,4 @@
 *.jack
 *.xml
 *.depend
+*.layout

@@ -124,21 +124,21 @@ void compileClassVarDec(FILE *fp, FILE *fw)
 
     // token has been extracted to check whether class should call VarDec or subRoutine
     if (strcmp("static", token) == 0 || strcmp("field", token) == 0) {
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
 
     if (has_more_token(fp)) {       // type
         advance(fp);
         if (tokenType == KEYWORD) {
             if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN) {
-                fprintf(fw, "<keyword> %s </keyword>", token);
+                fprintf(fw, "<keyword> %s </keyword>\n", token);
             }
         }
     }
     if (has_more_token(fp)) {       // identifier
         advance(fp);
         if (tokenType == IDENTIFIER) {
-            fprintf(fw, "<identifier> %s </identifier>", token);
+            fprintf(fw, "<identifier> %s </identifier>\n", token);
         }
     }
 
@@ -151,7 +151,7 @@ void compileClassVarDec(FILE *fp, FILE *fw)
             if (has_more_token(fp)) {                               // identifier
                 advance(fp);
                 if (tokenType == IDENTIFIER)
-                    fprintf(fw, "<identifier> %s </identifier>", token);
+                    fprintf(fw, "<identifier> %s </identifier>\n", token);
             }
             if (has_more_token(fp)) {
                 advance(fp);
@@ -168,7 +168,7 @@ void compileSubroutine(FILE *fp, FILE *fw)
     fprintf(fw, "<subroutineDec>\n");
 
     if (keyWord() == CONSTRUCTOR || keyWord() == FUNCTION || keyWord() == METHOD) {
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
 
     if (has_more_token(fp)) {       // identifier | void | type
@@ -176,7 +176,7 @@ void compileSubroutine(FILE *fp, FILE *fw)
         if (tokenType == IDENTIFIER)
             fprintf(fw, "<identifier> %s </identifier>\n", token);
         else if (keyWord() == INT || keyWord() == CHAR || keyWord() == VOID || keyWord() == BOOLEAN) {
-            fprintf(fw, "<keyword> %s </keyword>", token);
+            fprintf(fw, "<keyword> %s </keyword>\n", token);
         }
     }
 
@@ -230,7 +230,7 @@ void compileParameterList(FILE *fp, FILE *fw)
         advance(fp);
         if (tokenType == KEYWORD) {
             if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN) {
-                fprintf(fw, "<keyword> %s </keyword>", token);
+                fprintf(fw, "<keyword> %s </keyword>\n", token);
             }
         } else if (strcmp(")", token) == 0) {   // no parameter
             fprintf(fw, "</parameterList>\n");
@@ -240,7 +240,7 @@ void compileParameterList(FILE *fp, FILE *fw)
     if (has_more_token(fp)) {           // name for parameter
         advance(fp);
         if (tokenType == IDENTIFIER) {
-            fprintf(fw, "<identifier> %s </identifier>", token);
+            fprintf(fw, "<identifier> %s </identifier>\n", token);
         }
     }
 
@@ -254,14 +254,14 @@ void compileParameterList(FILE *fp, FILE *fw)
                 advance(fp);
                 if (tokenType == KEYWORD) {
                     if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN) {
-                        fprintf(fw, "<keyword> %s </keyword>", token);
+                        fprintf(fw, "<keyword> %s </keyword>\n", token);
                     }
                 }
             }
             if (has_more_token(fp)) {           // name for parameter
                 advance(fp);
                 if (tokenType == IDENTIFIER) {
-                    fprintf(fw, "<identifier> %s </identifier>", token);
+                    fprintf(fw, "<identifier> %s </identifier>\n", token);
                 }
             }
         } else {
@@ -278,20 +278,20 @@ void compileVarDec(FILE *fp, FILE *fw)
     fprintf(fw, "<varDec>\n");
 
     if (strcmp("var", token) == 0) {    // var
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
 
     if (has_more_token(fp)) {           // type
         advance(fp);
         if (tokenType == IDENTIFIER) {
-            fprintf(fw, "<identifier> %s </identifier>", token);
+            fprintf(fw, "<identifier> %s </identifier>\n", token);
         }
     }
 
     if (has_more_token(fp)) {           // varName
         advance(fp);
         if (tokenType == IDENTIFIER) {
-            fprintf(fw, "<identifier> %s </identifier>", token);
+            fprintf(fw, "<identifier> %s </identifier>\n", token);
         }
     }
 
@@ -305,7 +305,7 @@ void compileVarDec(FILE *fp, FILE *fw)
                 if (has_more_token(fp)) {
                     advance(fp);
                     if (tokenType == IDENTIFIER) {
-                        fprintf(fw, "<identifier> %s </identifier>", token);
+                        fprintf(fw, "<identifier> %s </identifier>\n", token);
                     }
                 }
                 if (has_more_token(fp))
@@ -356,7 +356,7 @@ void compileLet(FILE *fp, FILE *fw)
     fprintf(fw, "<letStatement>\n");
 
     if (tokenType == KEYWORD) {     // let
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
     if (has_more_token(fp)) {       // varName
         advance(fp);
@@ -398,7 +398,7 @@ void compileDo(FILE *fp, FILE *fw)
     fprintf(fw, "<doStatement>\n");
 
     if (tokenType == KEYWORD) {     // do
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
 
     if (has_more_token(fp)) {       // subroutineName
@@ -464,7 +464,7 @@ void compileReturn(FILE *fp, FILE *fw)
 {
     fprintf(fw, "<returnStatement>\n");
     if (tokenType == KEYWORD) {     // return
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
 
     if (has_more_token(fp)) {       // check have varName
@@ -493,19 +493,19 @@ void compileIf(FILE *fp, FILE *fw)
 {
     fprintf(fw, "<ifStatement>\n");
     if (tokenType == KEYWORD) {     // if
-        fprintf(fw, "<keyword> %s </keyword>", token);
+        fprintf(fw, "<keyword> %s </keyword>\n", token);
     }
     if (has_more_token(fp)) {       // '('
         advance(fp);
         if (tokenType == SYMBOL)
-            fprintf(fw, "<symbol> %s </symbol>", token);
+            fprintf(fw, "<symbol> %s </symbol>\n", token);
     }
     // TODO: expression
     fprintf(fw, "<expression>\n");
     fprintf(fw, "<term>\n");
     if (has_more_token(fp)) {
         advance(fp);
-        fprintf(fw, "<identifier> %s </identifier>", token);
+        fprintf(fw, "<identifier> %s </identifier>\n", token);
     }
     fprintf(fw, "</term>\n");
     fprintf(fw, "</expression>\n");
@@ -513,12 +513,12 @@ void compileIf(FILE *fp, FILE *fw)
     if (has_more_token(fp)) {       // ')'
         advance(fp);
         if (tokenType == SYMBOL)
-            fprintf(fw, "<symbol> %s </symbol>", token);
+            fprintf(fw, "<symbol> %s </symbol>\n", token);
     }
     if (has_more_token(fp)) {       // '{'
         advance(fp);
         if (tokenType == SYMBOL)
-            fprintf(fw, "<symbol> %s </symbol>", token);
+            fprintf(fw, "<symbol> %s </symbol>\n", token);
     }
 
     compileStatements(fp, fw);
@@ -526,7 +526,7 @@ void compileIf(FILE *fp, FILE *fw)
     // no need to get new token, compileStatement has done it to
     // check the ending
     if (tokenType == SYMBOL)
-        fprintf(fw, "<symbol> %s </symbol>", token);
+        fprintf(fw, "<symbol> %s </symbol>\n", token);
 
     fprintf(fw, "</ifStatement>\n");
 }
