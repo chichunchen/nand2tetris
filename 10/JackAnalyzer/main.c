@@ -205,7 +205,14 @@ void compileSubroutine(FILE *fp, FILE *fw)
             fprintf(fw, "<symbol> %s </symbol>\n", token);
     }
     // varDec*
-    // compileVarDec(fp, fw);
+    if (has_more_token(fp)) {
+        advance(fp);
+    }
+    while (strcmp("var", token) == 0) {
+        compileVarDec(fp, fw);
+        if (has_more_token(fp))
+            advance(fp);
+    }
 
     compileStatements(fp, fw);
     fprintf(fw, "</subroutineBody>\n");
@@ -267,21 +274,18 @@ void compileVarDec(FILE *fp, FILE *fw)
 {
     fprintf(fw, "<varDec>\n");
 
-    if (has_more_token(fp)) {
-        advance(fp);
-        if (strcmp("var", token) == 0) {
-            fprintf(fw, "<keyword> %s </keyword>", token);
-        }
+    if (strcmp("var", token) == 0) {    // var
+        fprintf(fw, "<keyword> %s </keyword>", token);
     }
 
-    if (has_more_token(fp)) {           // var type
+    if (has_more_token(fp)) {           // type
         advance(fp);
         if (tokenType == IDENTIFIER) {
             fprintf(fw, "<identifier> %s </identifier>", token);
         }
     }
 
-    if (has_more_token(fp)) {           // var name
+    if (has_more_token(fp)) {           // varName
         advance(fp);
         if (tokenType == IDENTIFIER) {
             fprintf(fw, "<identifier> %s </identifier>", token);
@@ -289,16 +293,23 @@ void compileVarDec(FILE *fp, FILE *fw)
     }
 
     // it can be ',' or ';'
-    if (has_more_token(fp)) {       // ';'
+    if (has_more_token(fp)) {
         advance(fp);
         if (tokenType == SYMBOL) {
-            if (strcmp(";", token) == 0) {
-                fprintf(fw, "<symbol> %s </symbol>\n", token);
+            while (strcmp(";", token) != 0) {
+                // (',' varName)*
+                fprintf(fw, "<symbol> %s </symbol>\n", token);      // ','
+                if (has_more_token(fp)) {
+                    advance(fp);
+                    if (tokenType == IDENTIFIER) {
+                        fprintf(fw, "<identifier> %s </identifier>", token);
+                    }
+                }
+                if (has_more_token(fp))
+                    advance(fp);
             }
-            else if (strcmp(",", token) == 0) {
-                fprintf(fw, "<symbol> %s </symbol>\n", token);
-                // ((',' varName)*
-            }
+            // ;
+            fprintf(fw, "<symbol> %s </symbol>\n", token);
         }
     }
 
@@ -308,7 +319,7 @@ void compileVarDec(FILE *fp, FILE *fw)
 void compileStatements(FILE *fp, FILE *fw)
 {
     fprintf(fw, "<statements>\n");
-    while (has_more_token(fp)) {       // token = 'let' | 'do' | 'if' | 'while' | 'return'
+    do {       // token = 'let' | 'do' | 'if' | 'while' | 'return'
         advance(fp);
         if (strcmp("}", token) == 0) {
             break;
@@ -330,7 +341,7 @@ void compileStatements(FILE *fp, FILE *fw)
             compileReturn(fp, fw);
             break;
         }
-    }
+    } while (has_more_token(fp));
     fprintf(fw, "</statements>\n");
 }
 
@@ -415,7 +426,6 @@ void compileDo(FILE *fp, FILE *fw)
 
         if (has_more_token(fp)) {       // ;
             advance(fp);
-            printf("ggff %s\n", token);
             if (tokenType == SYMBOL)
                 fprintf(fw, "<symbol> %s </symbol>\n", token);
         }
@@ -431,7 +441,7 @@ void compileDo(FILE *fp, FILE *fw)
 
     if (has_more_token(fp)) {       // ;
         advance(fp);
-        printf("ggff %s\n", token);
+        //printf("ggff %s\n", token);
         if (tokenType == SYMBOL)
             fprintf(fw, "<symbol> %s </symbol>\n", token);
     }
@@ -587,7 +597,7 @@ void advance(FILE *fp)
                 break;
             }
         }
-        printf("%s, %d\n", token, tokenType);
+        //printf("%s, %d\n", token, tokenType);
     } else if (isdigit(c)) {        // integer constant
         tokenType = INT_CONST;
         for (*p++ = c; isdigit(c = fgetc(fp)); )
