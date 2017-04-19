@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <windows.h>
 
 #define MAXTOKEN    100
 #define MAXFILE     256
@@ -19,12 +20,12 @@ enum tokenType {
 
 enum keyword {
     CLASS, METHOD, FUNCTION,
-    CONSTRUCTOR, INT,
-    BOOLEAN, CHAR, VOID,
+    CONSTRUCTOR, _INT,
+    _BOOLEAN, _CHAR, _VOID,
     VAR, STATIC, FIELD, LET,
-    DO, IF, ELSE, WHILE,
-    RETURN, TRUE, FALSE,
-    NULLX, THIS
+    DO, _IF, _ELSE, _WHILE,
+    _RETURN, _TRUE, _FALSE,
+    _NULL, _THIS
 };
 
 const char* keyword[] = {
@@ -59,7 +60,7 @@ int tokenType;
 char *setFileName(const char *arg);
 
 // JackTokenizer Module
-int is_regular_file(const char *filename);
+int is_directory(const char *filename);
 int has_more_token(FILE *fp);
 void putBack();
 void advance(FILE *fp);
@@ -147,7 +148,7 @@ void compileClassVarDec(FILE *fp, FILE *fw)
     if (has_more_token(fp)) {       // type
         advance(fp);
         if (tokenType == KEYWORD) {
-            if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN) {
+            if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
                 fprintf(fw, "<keyword> %s </keyword>\n", token);
             }
         } else if (tokenType == IDENTIFIER) {
@@ -194,7 +195,7 @@ void compileSubroutine(FILE *fp, FILE *fw)
         advance(fp);
         if (tokenType == IDENTIFIER)
             fprintf(fw, "<identifier> %s </identifier>\n", token);
-        else if (keyWord() == INT || keyWord() == CHAR || keyWord() == VOID || keyWord() == BOOLEAN) {
+        else if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _VOID || keyWord() == _BOOLEAN) {
             fprintf(fw, "<keyword> %s </keyword>\n", token);
         }
     }
@@ -248,7 +249,7 @@ void compileParameterList(FILE *fp, FILE *fw)
     if (has_more_token(fp)) {           // type for parameter
         advance(fp);
         if (tokenType == KEYWORD) {
-            if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN) {
+            if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
                 fprintf(fw, "<keyword> %s </keyword>\n", token);
             }
         } else if (strcmp(")", token) == 0) {   // no parameter
@@ -272,7 +273,7 @@ void compileParameterList(FILE *fp, FILE *fw)
             if (has_more_token(fp)) {           // type for parameter
                 advance(fp);
                 if (tokenType == KEYWORD) {
-                    if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN) {
+                    if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
                         fprintf(fw, "<keyword> %s </keyword>\n", token);
                     }
                 }
@@ -304,7 +305,7 @@ void compileVarDec(FILE *fp, FILE *fw)
         advance(fp);
         if (tokenType == IDENTIFIER) {
             fprintf(fw, "<identifier> %s </identifier>\n", token);
-        } else if (keyWord() == INT || keyWord() == CHAR || keyWord() == BOOLEAN || keyWord() == VOID) {
+        } else if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN || keyWord() == _VOID) {
             fprintf(fw, "<keyword> %s </keyword>\n", token);
         }
     }
@@ -358,13 +359,13 @@ void compileStatements(FILE *fp, FILE *fw)
         case DO:
             compileDo(fp, fw);
             break;
-        case IF:
+        case _IF:
             compileIf(fp, fw);
             break;
-        case WHILE:
+        case _WHILE:
             compileWhile(fp, fw);
             break;
-        case RETURN:
+        case _RETURN:
             compileReturn(fp, fw);
             break;
         }
@@ -714,14 +715,61 @@ int main(int argc, const char *argv[])
         printf("usage: ./a.out <name of file or directory>\n");
     else {
         putback = 0;
-        if (is_regular_file(argv[1])) {
-            FILE *fp = fopen(argv[1], "r");
+        FILE *fp;
+        FILE *fw;
+        if (!is_directory(argv[1])) {
+            fp = fopen(argv[1], "r");
             char *ptr = setFileName(argv[1]);
-            FILE *fw = fopen(ptr, "w");
+            fw = fopen(ptr, "w");
             compileClass(fp, fw);
+            fclose(fp);
+            fclose(fw);
             //tokenTest(fp, fw);
         } else {        // dir
+            WIN32_FIND_DATA fdFile;
+            HANDLE hFind = NULL;
 
+            char sPath[2048];
+
+            //Specify a file mask. *.* = We want everything!
+            sprintf(sPath, "%s\\*.*", argv[1]);
+            //printf("%s\n", sPath);
+            if ((hFind = FindFirstFile(sPath, &fdFile)) == INVALID_HANDLE_VALUE) {
+                printf("Path not found: [%s]\n", argv[1]);
+                return;
+            }
+
+            do {
+                //Find first file will always return "."
+                //    and ".." as the first two directories.
+                if (strcmp(fdFile.cFileName, ".") != 0
+                    && strcmp(fdFile.cFileName, "..") != 0) {
+                    //Build up our file path using the passed in
+                    //  [sDir] and the file/foldername we just found:
+                    sprintf(sPath, "%s\\%s", argv[1], fdFile.cFileName);
+
+                    //Is the entity a File or Folder?
+                    if (fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY) {
+                        printf("Directory: %s\n", sPath);
+                        //ListDirectoryContents(sPath); //Recursion, I love it!
+                    }
+                    else {
+                        char *p = sPath;
+                        while(*p++ != '.')
+                            ;
+                        if (strcmp("jack", p) == 0) {
+                            fp = fopen(sPath, "r");
+                            char *ptr = setFileName(sPath);
+                            fw = fopen(ptr, "w");
+                            compileClass(fp, fw);
+                            fclose(fp);
+                            fclose(fw);
+                        }
+                    }
+                }
+            } while(FindNextFile(hFind, &fdFile)); //Find the next file.
+
+            FindClose(hFind); //Always, Always, clean things up!
         }
     }
 
@@ -734,13 +782,16 @@ char* setFileName(const char *arg)
     strcpy(filename, arg);
     char *ptr = filename;
     while(*ptr++ != '.') ;
-    strcpy(ptr, "xml");
+    strcpy(ptr, "ml");
     return filename;
 }
 
-int is_regular_file(const char *filename)
+int is_directory(const char *szPath)
 {
-    return 1;
+    DWORD dwAttrib = GetFileAttributes(szPath);
+
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+           (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 void skip_comments(FILE *fp)
@@ -754,7 +805,7 @@ void skip_comments(FILE *fp)
 int has_more_token(FILE *fp)
 {
     if (putback) {
-        return;
+        return 1;
     }
 
     int c;
@@ -857,13 +908,13 @@ int keyWord()
     if (strcmp(token, "class") == 0) {
         return CLASS;
     } else if (strcmp(token, "int") == 0) {
-        return INT;
+        return _INT;
     } else if (strcmp(token, "boolean") == 0) {
-        return BOOLEAN;
+        return _BOOLEAN;
     } else if (strcmp(token, "char") == 0) {
-        return CHAR;
+        return _CHAR;
     } else if (strcmp(token, "void") == 0) {
-        return VOID;
+        return _VOID;
     } else if (strcmp(token, "static") == 0) {
         return STATIC;
     } else if (strcmp(token, "field") == 0) {
@@ -879,11 +930,11 @@ int keyWord()
     } else if (strcmp(token, "do") == 0) {
         return DO;
     } else if (strcmp(token, "if") == 0) {
-        return IF;
+        return _IF;
     } else if (strcmp(token, "while") == 0) {
-        return WHILE;
+        return _WHILE;
     } else if (strcmp(token, "return") == 0) {
-        return RETURN;
+        return _RETURN;
     }
     return -1;
 }
