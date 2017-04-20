@@ -4,3 +4,5 @@
 *.xml
 *.depend
 *.layout
+ArrayTest/
+Square/
