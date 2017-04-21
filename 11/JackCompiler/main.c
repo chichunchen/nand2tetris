@@ -8,7 +8,6 @@ int tokenType;
 
 int main(int argc, const char *argv[])
 {
-    symbolTest();
     if (argc < 2)
         printf("usage: ./a.out <name of file or directory>\n");
     else {
@@ -23,6 +22,7 @@ int main(int argc, const char *argv[])
             fclose(fp);
             fclose(fw);
             //tokenTest(fp, fw);
+            symbolTest();
         } else {        // dir
             WIN32_FIND_DATA fdFile;
             HANDLE hFind = NULL;

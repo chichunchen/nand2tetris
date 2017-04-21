@@ -12,6 +12,8 @@ struct nlist {
 struct nlist *class_hashtab[HASHSIZE];
 struct nlist *subroutine_hashtab[HASHSIZE];
 
+/* Helper Functions */
+
 unsigned hash(char *s)
 {
     unsigned hashval;
@@ -35,6 +37,8 @@ struct nlist *lookup(int choice, char *s)
             return np;
     return NULL;
 }
+
+/* Public Functions */
 
 // Defines a new identifier of a given name, type, and kind and assigns it a running index.
 // STATIC and FIELD identifiers have a class scope, while ARG and VAR identifiers have a
@@ -112,15 +116,37 @@ int indexOf(int choice, char *name)
         return NONE;
 }
 
+// clean subroutine table after the function/method returned
+void cleanTab()
+{
+    int i;
+    for (i = 0; i < HASHSIZE; i++) {
+        struct nlist *np = subroutine_hashtab[i];
+        if (np) {
+            if (np->type)
+                free(np->type);
+            np->kind = NONE;
+            np->index = NONE;
+            np = NULL;
+        }
+    }
+}
+
 void symbolTest()
 {
-    char *v1 = "a";
-    char *v2 = "b";
-    Define(CLASS, v1, "int", STATIC, 1);
-    Define(CLASS, v2, "string", STATIC, 0);
-
-    printf("success, type: %s, kindof: %d, indexof: %d\n", typeOf(CLASS, v1), kindOf(CLASS, v1), indexOf(CLASS, v1));
-    printf("success, type: %s, kindof: %d, indexof: %d\n", typeOf(CLASS, v2), kindOf(CLASS, v2), indexOf(CLASS, v2));
-
-    printf("var count: %d\n", varCount(CLASS, STATIC));
+    printf("------ class -------\n");
+    int i;
+    for (i = 0; i < HASHSIZE; i++) {
+        if (class_hashtab[i]) {
+            char *v1 = class_hashtab[i]->name;
+            printf("name: %s, type: %s, kind: %d, index: %d\n", v1, typeOf(CLASS, v1), kindOf(CLASS, v1), indexOf(CLASS, v1));
+        }
+    }
+    printf("------ subroutine -------\n");
+    for (i = 0; i < HASHSIZE; i++) {
+        if (subroutine_hashtab[i]) {
+            char *v1 = subroutine_hashtab[i]->name;
+             printf("name: %s, type: %s, kind: %d, index: %d\n", v1, typeOf(SUBROUTINE, v1), kindOf(SUBROUTINE, v1), indexOf(SUBROUTINE, v1));
+        }
+    }
 }

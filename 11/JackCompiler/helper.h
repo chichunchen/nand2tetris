@@ -58,7 +58,7 @@ void compileReturn(FILE *fp, FILE *fw);
 void compileIf(FILE *fp, FILE *fw);
 void compileExpression(FILE *fp, FILE *fw);
 void compileTerm(FILE *fp, FILE *fw);
-void compileExpressionList(FILE *fp, FILE *fw);
+int  compileExpressionList(FILE *fp, FILE *fw);
 void compileSubroutineCall(FILE *fp, FILE *fw);
 
 /* Symbol Table */
@@ -67,6 +67,10 @@ struct nlist *Define(int choice, char *name, char* type, int kind, int index);
 int varCount(int choice, int kind);
 int kindOf(int choice, char *name);
 char *typeOf(int choice, char *name);
+void cleanTab();
 void symbolTest();
+
+/* VM writer */
+void writeArithmetic(FILE *fw, char *command);
 
 #endif
