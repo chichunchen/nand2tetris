@@ -9,7 +9,7 @@ char* setFileName(const char *arg)
     strcpy(filename, arg);
     char *ptr = filename;
     while(*ptr++ != '.') ;
-    strcpy(ptr, "ml");
+    strcpy(ptr, "vm");
     return filename;
 }
 
@@ -122,7 +122,7 @@ void advance(FILE *fp)
 inline int keyWord()
 {
     if (strcmp(token, "class") == 0) {
-        return CLASS;
+        return _CLASS;
     } else if (strcmp(token, "int") == 0) {
         return _INT;
     } else if (strcmp(token, "boolean") == 0) {
@@ -132,19 +132,19 @@ inline int keyWord()
     } else if (strcmp(token, "void") == 0) {
         return _VOID;
     } else if (strcmp(token, "static") == 0) {
-        return STATIC;
+        return _STATIC;
     } else if (strcmp(token, "field") == 0) {
-        return FIELD;
+        return _FIELD;
     } else if (strcmp(token, "constructor") == 0) {
-        return CONSTRUCTOR;
+        return _CONSTRUCTOR;
     } else if (strcmp(token, "function") == 0) {
-        return FUNCTION;
+        return _FUNCTION;
     } else if (strcmp(token, "method") == 0) {
-        return METHOD;
+        return _METHOD;
     } else if (strcmp(token, "let") == 0) {
-        return LET;
+        return _LET;
     } else if (strcmp(token, "do") == 0) {
-        return DO;
+        return _DO;
     } else if (strcmp(token, "if") == 0) {
         return _IF;
     } else if (strcmp(token, "while") == 0) {

@@ -13,6 +13,8 @@
 #define SYMBOL_NUM  19
 #define OP_NUM      9
 
+#define HASHSIZE    1000
+
 /* Gloabal Variables */
 
 extern int putback;
@@ -58,5 +60,13 @@ void compileExpression(FILE *fp, FILE *fw);
 void compileTerm(FILE *fp, FILE *fw);
 void compileExpressionList(FILE *fp, FILE *fw);
 void compileSubroutineCall(FILE *fp, FILE *fw);
+
+/* Symbol Table */
+
+struct nlist *Define(int choice, char *name, char* type, int kind, int index);
+int varCount(int choice, int kind);
+int kindOf(int choice, char *name);
+char *typeOf(int choice, char *name);
+void symbolTest();
 
 #endif

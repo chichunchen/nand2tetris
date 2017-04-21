@@ -25,3 +25,7 @@ const char* unaryOp[] = {
 const char *keywordConstant[] = {
     "true", "false", "null", "this"
 };
+
+const char *types[] = {
+    "int", "char", "boolean", "void", "String", "Array"
+};

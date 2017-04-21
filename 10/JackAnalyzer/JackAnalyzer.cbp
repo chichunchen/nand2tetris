@@ -11,28 +11,42 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="Square.jack" />
+				<Option parameters="Square" />
 				<Compiler>
+					<Add option="-pg" />
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add option="-pg -lgmon" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/JackAnalyzer" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="Square" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-O3" />
 				</Compiler>
-				<Linker>
-					<Add option="-s" />
-				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="compile.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="constant.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="constant.h" />
+		<Unit filename="dbg.h" />
+		<Unit filename="helper.h" />
 		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="parser.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>
