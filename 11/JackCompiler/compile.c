@@ -3,6 +3,9 @@
 
 /* terminals */
 
+char className[100];
+char LL1_TEMP[100];
+
 void inline compileKeyword(FILE *fp, FILE *fw, int options, char *info)
 {
     if (has_more_token(fp)) {
@@ -65,6 +68,7 @@ void compileClass(FILE *fp, FILE *fw)
     }
 
     compileIdentifier(fp, fw, "className");
+    strcpy(className, token);
     compileSymbol(fp, fw, "{");
 
     // classVarDec*
@@ -137,11 +141,14 @@ void compileClassVarDec(FILE *fp, FILE *fw)
 void compileSubroutine(FILE *fp, FILE *fw)
 {
     //fprintf(fw, "<subroutineDec>\n");
+    char funcType[100];
+    char subroutinName[100];
 
     putBack();
     compileKeyword(fp, fw,
                     keyWord() == _CONSTRUCTOR || keyWord() == _FUNCTION || keyWord() == _METHOD,
                     "constructor|function|method");
+    strcpy(funcType, token);
 
     if (has_more_token(fp)) {       // identifier | void | type
         advance(fp);
@@ -154,6 +161,7 @@ void compileSubroutine(FILE *fp, FILE *fw)
     }
 
     compileIdentifier(fp, fw, "subroutineName");
+    strcpy(subroutinName, token);
     compileSymbol(fp, fw, "(");
 
     compileParameterList(fp, fw);
@@ -174,6 +182,7 @@ void compileSubroutine(FILE *fp, FILE *fw)
         if (has_more_token(fp))
             advance(fp);
     }
+    fprintf(fw, "%s %s.%s %d\n", funcType, className, subroutinName, varCount(SUBROUTINE, VAR));
 
     compileStatements(fp, fw);
     putBack();
@@ -181,7 +190,6 @@ void compileSubroutine(FILE *fp, FILE *fw)
 
     printTable();
     cleanSubroutineTab();
-
     //fprintf(fw, "</subroutineBody>\n");
     //fprintf(fw, "</subroutineDec>\n");
 }
@@ -193,7 +201,7 @@ void compileParameterList(FILE *fp, FILE *fw)
 
     if (has_more_token(fp)) {           // type for parameter
         advance(fp);
-        if (tokenType == KEYWORD) {
+        if (tokenType == KEYWORD || tokenType == IDENTIFIER) {
             if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
                 //fprintf(fw, "<keyword> %s </keyword>\n", token);
             }
@@ -372,6 +380,7 @@ void compileReturn(FILE *fp, FILE *fw)
         }
     }
 
+    fprintf(fw, "push constant 0\nreturn\n");
     putBack();
     compileSymbol(fp, fw, ";");
 
@@ -390,12 +399,16 @@ void compileExpression(FILE *fp, FILE *fw)
     }
     int i;
     int is_op = 0;
+    char oper[100];
     for (i = 0; i < OP_NUM; i++) {
         if (strcmp(op[i], token) == 0) {        // check op?
             is_op = 1;
-            if (tokenType == SYMBOL)            // op
+            if (tokenType == SYMBOL) {          // op
+                strcpy(oper, token);
+            }
                 //fprintf(fw, "<symbol> %s </symbol>\n", token);
             compileTerm(fp, fw);
+            writeArithmetic(fw, oper);
         }
     }
     if (!is_op)
@@ -417,6 +430,7 @@ void compileTerm(FILE *fp, FILE *fw)
     } else if (tokenType == INT_CONST) {
         putBack();
         compileIntegerConstant(fp, fw);
+        fprintf(fw, "push constant %s\n", token);
     } else if (tokenType == STRING_CONST) {
         putBack();
         compileStringConstant(fp, fw);
@@ -431,8 +445,16 @@ void compileTerm(FILE *fp, FILE *fw)
     } else if (strcmp(unaryOp[0], token) == 0 || strcmp(unaryOp[1], token) == 0) {
         putBack();
         compileSymbol(fp, fw, "unaryOp");
+        char temp[100];
+        strcpy(temp, token);
         compileTerm(fp, fw);
+        if (strcmp("-", temp) == 0)
+            fprintf(fw, "neg\n");
+        else
+            fprintf(fw, "not\n");
     }
+
+    strcpy(LL1_TEMP, token);
 
     if (has_more_token(fp))                                 // check ahead for LL(1)
         advance(fp);
@@ -507,10 +529,10 @@ void compileWhile(FILE *fp, FILE *fw)
 
 // before calling this method, you should check the token
 // if the token is ")", then you should just print <expressionList></expressionList>
-void compileExpressionList(FILE *fp, FILE *fw)
+int compileExpressionList(FILE *fp, FILE *fw)
 {
+    int count = 1;
     //fprintf(fw, "<expressionList>\n");
-
     compileExpression(fp, fw);
 
     if (has_more_token(fp)) {
@@ -520,6 +542,7 @@ void compileExpressionList(FILE *fp, FILE *fw)
     // (',' expression)*
     while (strcmp(",", token) == 0) {
         putBack();
+        count++;
         compileSymbol(fp, fw, ",");
         compileExpression(fp, fw);
         if (has_more_token(fp))
@@ -528,20 +551,32 @@ void compileExpressionList(FILE *fp, FILE *fw)
     putBack();
 
     //fprintf(fw, "</expressionList>\n");
+    return count;
 }
 
 void compileSubroutineCall(FILE *fp, FILE *fw)
 {
+    char funcName[100];
+    char subroutine[100];
+    int count;
+    enum _funcType {
+        SIMPLE,
+        COMPLICATED
+    } funcType;
+    funcType = SIMPLE;
+
     if (has_more_token(fp)) {       // subroutineName | className
         advance(fp);
     }
 
     if (is_LL1) {
         putBack();
+        strcpy(funcName, LL1_TEMP);
         is_LL1 = 0;
     }
     else if (tokenType == IDENTIFIER) {
         //fprintf(fw, "<identifier> %s </identifier>\n", token);
+        strcpy(funcName, token);
     }
 
     if (has_more_token(fp)) {                   // could be '(' or '.'
@@ -553,8 +588,10 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
         compileSymbol(fp, fw, "(");
     } else if (strcmp(".", token) == 0) {
         putBack();
+        funcType = COMPLICATED;
         compileSymbol(fp, fw, ".");
         compileIdentifier(fp, fw, "subroutineName");
+        strcpy(subroutine, token);
         compileSymbol(fp, fw, "(");
     }
 
@@ -566,7 +603,16 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
         putBack();
     } else {
         putBack();
-        compileExpressionList(fp, fw);
+        count = compileExpressionList(fp, fw);
+    }
+
+    switch(funcType) {
+    case SIMPLE:
+        fprintf(fw, "call %s %d\n", funcName, count);
+        break;
+    case COMPLICATED:
+        fprintf(fw, "call %s.%s %d\n", funcName, subroutine, count);
+        break;
     }
 
     compileSymbol(fp, fw, ")");

@@ -15,6 +15,8 @@ struct nlist **chead = class_hashtab;
 struct nlist *subroutine_hashtab[HASHSIZE];
 struct nlist **shead = subroutine_hashtab;
 
+/* Helper Functions */
+
 unsigned hash(char *s)
 {
     unsigned hashval;
@@ -38,6 +40,8 @@ struct nlist *lookup(int choice, char *s)
             return np;
     return NULL;
 }
+
+/* Public Functions */
 
 // Defines a new identifier of a given name, type, and kind and assigns it a running index.
 // STATIC and FIELD identifiers have a class scope, while ARG and VAR identifiers have a
@@ -158,6 +162,7 @@ void printTable()
         struct nlist *np = subroutine_hashtab[i];
         if (np && np->name) {
             printf("name: %s, type: %s, kind: %d, index: %d\n", np->name, np->type, np->kind, np->index);
+
         }
     }
 }

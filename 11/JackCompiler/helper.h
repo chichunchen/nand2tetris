@@ -58,7 +58,7 @@ void compileReturn(FILE *fp, FILE *fw);
 void compileIf(FILE *fp, FILE *fw);
 void compileExpression(FILE *fp, FILE *fw);
 void compileTerm(FILE *fp, FILE *fw);
-void compileExpressionList(FILE *fp, FILE *fw);
+int  compileExpressionList(FILE *fp, FILE *fw);
 void compileSubroutineCall(FILE *fp, FILE *fw);
 
 /* Symbol Table */
@@ -70,5 +70,8 @@ char *typeOf(int choice, char *name);
 void cleanSubroutineTab();
 void symbolTest();
 void printTable();
+
+/* VM writer */
+void writeArithmetic(FILE *fw, char *command);
 
 #endif

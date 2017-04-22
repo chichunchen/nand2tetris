@@ -22,6 +22,7 @@ int main(int argc, const char *argv[])
             fclose(fp);
             fclose(fw);
             //tokenTest(fp, fw);
+            symbolTest();
         } else {        // dir
             WIN32_FIND_DATA fdFile;
             HANDLE hFind = NULL;
