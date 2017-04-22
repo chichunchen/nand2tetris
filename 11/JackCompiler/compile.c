@@ -3,6 +3,8 @@
 
 /* terminals */
 
+int objSize = 0;
+
 char className[100];
 char LL1_TEMP[100];
 
@@ -98,17 +100,25 @@ void compileClass(FILE *fp, FILE *fw)
 
     putBack();
     compileSymbol(fp, fw, "}");
+    printClassTable();
 
     //fprintf(fw, "</class>\n");
 }
 
 void compileClassVarDec(FILE *fp, FILE *fw)
 {
+    char type[BUFSIZ];
+    int kind = -1;
     //fprintf(fw, "<classVarDec>\n");
 
     // token has been extracted to check whether class should call VarDec or subRoutine
-    if (strcmp("static", token) == 0 || strcmp("field", token) == 0) {
+    //if (strcmp("static", token) == 0 || strcmp("field", token) == 0) {
         //fprintf(fw, "<keyword> %s </keyword>\n", token);
+    //}
+    if (keyWord() == _STATIC) {
+        kind = STATIC;
+    } else if (keyWord() == _FIELD) {
+        kind = FIELD;
     }
 
     if (has_more_token(fp)) {       // type
@@ -120,8 +130,11 @@ void compileClassVarDec(FILE *fp, FILE *fw)
         } else if (tokenType == IDENTIFIER) {
             //fprintf(fw, "<identifier> %s </identifier>\n", token);
         }
+        strcpy(type, token);
     }
     compileIdentifier(fp, fw, "varName");
+    Define(CLASS, token, type, kind, varCount(CLASS, kind));
+    objSize++;
 
     // ((',' varName)*
     if (has_more_token(fp)) {
@@ -130,6 +143,8 @@ void compileClassVarDec(FILE *fp, FILE *fw)
             putBack();
             compileSymbol(fp, fw, ",");
             compileIdentifier(fp, fw, "varName");
+            Define(CLASS, token, type, kind, varCount(CLASS, kind));
+            objSize++;
 
             if (has_more_token(fp)) {
                 advance(fp);
@@ -144,8 +159,8 @@ void compileClassVarDec(FILE *fp, FILE *fw)
 void compileSubroutine(FILE *fp, FILE *fw)
 {
     //fprintf(fw, "<subroutineDec>\n");
-    char funcType[100];
-    char subroutinName[100];
+    char funcType[BUFSIZ];
+    char subroutinName[BUFSIZ];
 
     putBack();
     compileKeyword(fp, fw,
@@ -185,13 +200,24 @@ void compileSubroutine(FILE *fp, FILE *fw)
         if (has_more_token(fp))
             advance(fp);
     }
-    fprintf(fw, "%s %s.%s %d\n", funcType, className, subroutinName, varCount(SUBROUTINE, VAR));
+
+    fprintf(fw, "function %s.%s %d\n", className, subroutinName, varCount(SUBROUTINE, VAR));
+    if (strcmp("constructor", funcType) == 0) {
+        writePush(fw, __CONST, objSize);
+        fprintf(fw, "call Memory.alloc %d\n", 1);
+        writePop(fw, __POINTER, 0);
+    } else if (strcmp("method", funcType) == 0) {
+        writePush(fw, __ARG, 0);
+        writePop(fw, __POINTER, 0);
+    } else if (strcmp("function", funcType) == 0) {
+
+    }
 
     compileStatements(fp, fw);
     putBack();
     compileSymbol(fp, fw, "}");
 
-    printTable();
+    printSubTable();
     cleanSubroutineTab();
     if_counter = -1;
     while_counter = -1;
@@ -353,11 +379,16 @@ void compileLet(FILE *fp, FILE *fw)
     compileExpression(fp, fw);
     compileSymbol(fp, fw, ";");
 
-    //printf("ss %s kindof: %d\n", varName, kindOf(varName));
     if (kindOf(varName) == VAR) {
         writePop(fw, __LOCAL, indexOf(varName));
     } else if (kindOf(varName) == ARG) {
         writePop(fw, __ARG, indexOf(varName));
+    } else if (kindOf(varName) == FIELD) {
+        writePop(fw, __THIS, indexOf(varName));
+    } else if (kindOf(varName) == STATIC) {
+        writePop(fw, __STATIC, indexOf(varName));
+    } else if (kindOf(varName) == FIELD) {
+        writePop(fw, __POINTER, indexOf(varName));
     }
     //writePop(fw, )
 
@@ -374,6 +405,7 @@ void compileDo(FILE *fp, FILE *fw)
     compileSubroutineCall(fp, fw);
     compileSymbol(fp, fw, ";");
 
+    // dummy data for return
     writePop(fw, __TEMP, 0);
 
     //fprintf(fw, "</doStatement>\n");
@@ -447,9 +479,9 @@ void compileTerm(FILE *fp, FILE *fw)
         putBack();
         compileIdentifier(fp, fw, "varName");
         if (kindOf(token) == FIELD) {
-            //writePush(fw, );
+            writePush(fw, __THIS, indexOf(token));
         } else if (kindOf(token) == STATIC) {
-
+            writePush(fw, __STATIC, indexOf(token));
         } else if (kindOf(token) == VAR) {
             writePush(fw, __LOCAL, indexOf(token));
         } else if (kindOf(token) == ARG) {
@@ -471,6 +503,8 @@ void compileTerm(FILE *fp, FILE *fw)
             fprintf(fw, "not\n");
         } else if (strcmp("false", token) == 0) {
             writePush(fw, __CONST, 0);
+        } else if (strcmp("this", token) == 0) {
+            writePush(fw, __POINTER, 0);
         }
     } else if (strcmp("(", token) == 0) {
         putBack();
@@ -527,17 +561,19 @@ void compileIf(FILE *fp, FILE *fw)
     compileSymbol(fp, fw, "{");
     compileStatements(fp, fw);
 
-    fprintf(fw, "goto IF_END%d\n", if_counter);
+    //fprintf(fw, "goto IF_END%d\n", if_counter);
+
     // no need to get new token, compileStatement has done it to
     // check the ending
     putBack();
     compileSymbol(fp, fw, "}");
-
     // check else
     if (has_more_token(fp)) {
         advance(fp);
     }
+
     if (strcmp("else", token) == 0) {
+        fprintf(fw,  "goto IF_END%d\n", if_counter);
         fprintf(fw, "label IF_FALSE%d\n", if_counter);
         putBack();
         compileKeyword(fp, fw, 1, "else");
@@ -547,15 +583,17 @@ void compileIf(FILE *fp, FILE *fw)
         putBack();
         compileSymbol(fp, fw, "}");
     } else {
+        fprintf(fw, "label IF_FALSE%d\n", if_counter);
         putBack();
     }
-    if_counter--;
+    //if_counter--;
     //fprintf(fw, "</ifStatement>\n");
 }
 
 void compileWhile(FILE *fp, FILE *fw)
 {
     while_counter++;
+    int temp = while_counter;
     fprintf(fw, "label WHILE_EXP%d\n", while_counter);
 
     //fprintf(fw, "<whileStatement>\n");
@@ -569,8 +607,8 @@ void compileWhile(FILE *fp, FILE *fw)
     compileSymbol(fp, fw, ")");
     compileSymbol(fp, fw, "{");
     compileStatements(fp, fw);
-    fprintf(fw, "goto WHILE_EXP%d\n", while_counter);
-    fprintf(fw, "label WHILE_END%d\n", while_counter);
+    fprintf(fw, "goto WHILE_EXP%d\n", temp);
+    fprintf(fw, "label WHILE_END%d\n", temp);
     // no need to get new token, compileStatement has done it to
     // check the ending
     putBack();
@@ -610,7 +648,7 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
 {
     char funcName[100];
     char subroutine[100];
-    int count;
+    int count = 0;
     enum _funcType {
         SIMPLE,
         COMPLICATED
@@ -628,8 +666,21 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
     }
     else if (tokenType == IDENTIFIER) {
         //fprintf(fw, "<identifier> %s </identifier>\n", token);
-        strcpy(funcName, token);
+        if (typeOf(token)) {
+            //printf("method: name: %s, type: %s, kind: %d, index: %d\n", token, typeOf(token), kindOf(token), indexOf(token));
+            strcpy(funcName, typeOf(token));
+            if (kindOf(token) == VAR) {
+                writePush(fw, __LOCAL, indexOf(token));
+            } else if (kindOf(token) == FIELD) {
+                writePush(fw, __THIS, indexOf(token));
+            }
+            count++;
+        } else {
+            //printf("function: name: %s\n", token);
+            strcpy(funcName, token);
+        }
     }
+
 
     if (has_more_token(fp)) {                   // could be '(' or '.'
         advance(fp);
@@ -660,7 +711,9 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
 
     switch(funcType) {
     case SIMPLE:
-        fprintf(fw, "call %s %d\n", funcName, count);
+        // must be method
+        writePush(fw, __POINTER, 0);
+        fprintf(fw, "call %s.%s %d\n", className, funcName, count+1);
         break;
     case COMPLICATED:
         fprintf(fw, "call %s.%s %d\n", funcName, subroutine, count);

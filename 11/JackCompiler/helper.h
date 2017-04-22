@@ -70,7 +70,8 @@ char *typeOf(char *name);
 int indexOf(char *name);
 void cleanSubroutineTab();
 void symbolTest();
-void printTable();
+void printClassTable();
+void printSubTable();
 
 /* VM writer */
 void writePush(FILE *fw, int vmtype, int index);

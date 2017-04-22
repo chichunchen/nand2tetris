@@ -159,20 +159,32 @@ void symbolTest()
     Define(SUBROUTINE, v1, "int", ARG, varCount(SUBROUTINE, ARG));
     Define(SUBROUTINE, v2, "string", ARG, varCount(SUBROUTINE, ARG));
 
-    printTable();
+    printSubTable();
 
     cleanSubroutineTab();
 
     Define(SUBROUTINE, "ahah", "int", STATIC, varCount(SUBROUTINE, STATIC));
     Define(SUBROUTINE, "aaa", "string", ARG, varCount(SUBROUTINE, ARG));
 
-    printTable();
+    printSubTable();
 }
 
-void printTable()
+void printClassTable()
 {
-    printf("------------ SubRoutine table -------------\n");
+    printf("------------ Class table -------------\n");
     int i;
+    for (i = 0; i < HASHSIZE; i++) {
+        struct nlist *np = class_hashtab[i];
+        if (np && np->name) {
+            printf("name: %s, type: %s, kind: %d, index: %d\n", np->name, np->type, np->kind, np->index);
+        }
+    }
+}
+
+void printSubTable()
+{
+    int i;
+    printf("------------ SubRoutine table -------------\n");
     for (i = 0; i < HASHSIZE; i++) {
         struct nlist *np = subroutine_hashtab[i];
         if (np && np->name) {
