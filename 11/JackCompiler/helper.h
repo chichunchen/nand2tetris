@@ -65,13 +65,19 @@ void compileSubroutineCall(FILE *fp, FILE *fw);
 
 struct nlist *Define(int choice, char *name, char* type, int kind, int index);
 int varCount(int choice, int kind);
-int kindOf(int choice, char *name);
-char *typeOf(int choice, char *name);
+int kindOf(char *name);
+char *typeOf(char *name);
+int indexOf(char *name);
 void cleanSubroutineTab();
 void symbolTest();
 void printTable();
 
 /* VM writer */
+void writePush(FILE *fw, int vmtype, int index);
+void writePop(FILE *fw, int vmtype, int index);
 void writeArithmetic(FILE *fw, char *command);
+void writeLabel(FILE *fw, char *label);
+void writeGoto(FILE *fw, char *label);
+void writeIf(FILE *fw, char *label);
 
 #endif

@@ -25,6 +25,10 @@ enum table_choice {
     CLASS, SUBROUTINE
 };
 
+enum vm_type {
+    __CONST, __ARG, __LOCAL, __STATIC, __THIS, __THAT, __POINTER, __TEMP
+};
+
 extern const char* keyword[];
 extern const char symbol[];
 extern const char* op[];

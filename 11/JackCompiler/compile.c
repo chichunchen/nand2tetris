@@ -6,6 +6,9 @@
 char className[100];
 char LL1_TEMP[100];
 
+int if_counter = -1;
+int while_counter = -1;
+
 void inline compileKeyword(FILE *fp, FILE *fw, int options, char *info)
 {
     if (has_more_token(fp)) {
@@ -190,6 +193,8 @@ void compileSubroutine(FILE *fp, FILE *fw)
 
     printTable();
     cleanSubroutineTab();
+    if_counter = -1;
+    while_counter = -1;
     //fprintf(fw, "</subroutineBody>\n");
     //fprintf(fw, "</subroutineDec>\n");
 }
@@ -319,6 +324,7 @@ void compileStatements(FILE *fp, FILE *fw)
 
 void compileLet(FILE *fp, FILE *fw)
 {
+    char varName[BUFSIZ];
     //fprintf(fw, "<letStatement>\n");
 
     if (tokenType == KEYWORD) {     // let
@@ -326,6 +332,7 @@ void compileLet(FILE *fp, FILE *fw)
     }
 
     compileIdentifier(fp, fw, "varName");
+    strcpy(varName, token);
 
     if (has_more_token(fp)) {
         advance(fp);
@@ -346,6 +353,14 @@ void compileLet(FILE *fp, FILE *fw)
     compileExpression(fp, fw);
     compileSymbol(fp, fw, ";");
 
+    //printf("ss %s kindof: %d\n", varName, kindOf(varName));
+    if (kindOf(varName) == VAR) {
+        writePop(fw, __LOCAL, indexOf(varName));
+    } else if (kindOf(varName) == ARG) {
+        writePop(fw, __ARG, indexOf(varName));
+    }
+    //writePop(fw, )
+
     //fprintf(fw, "</letStatement>\n");
 }
 
@@ -358,6 +373,8 @@ void compileDo(FILE *fp, FILE *fw)
 
     compileSubroutineCall(fp, fw);
     compileSymbol(fp, fw, ";");
+
+    writePop(fw, __TEMP, 0);
 
     //fprintf(fw, "</doStatement>\n");
 }
@@ -378,9 +395,11 @@ void compileReturn(FILE *fp, FILE *fw)
         if (has_more_token(fp)) {       // varName
             advance(fp);
         }
+    } else {
+        writePush(fw, __CONST, 0);
     }
 
-    fprintf(fw, "push constant 0\nreturn\n");
+    fprintf(fw, "return\n");
     putBack();
     compileSymbol(fp, fw, ";");
 
@@ -427,16 +446,32 @@ void compileTerm(FILE *fp, FILE *fw)
     if (tokenType == IDENTIFIER) {
         putBack();
         compileIdentifier(fp, fw, "varName");
+        if (kindOf(token) == FIELD) {
+            //writePush(fw, );
+        } else if (kindOf(token) == STATIC) {
+
+        } else if (kindOf(token) == VAR) {
+            writePush(fw, __LOCAL, indexOf(token));
+        } else if (kindOf(token) == ARG) {
+            writePush(fw, __ARG, indexOf(token));
+        }
     } else if (tokenType == INT_CONST) {
         putBack();
         compileIntegerConstant(fp, fw);
-        fprintf(fw, "push constant %s\n", token);
+        writePush(fw, __CONST, atoi(token));
     } else if (tokenType == STRING_CONST) {
         putBack();
         compileStringConstant(fp, fw);
     } else if (tokenType == KEYWORD) {
         putBack();
         compileKeyword(fp, fw, 1, "keywordConstant");
+        //printf("key %s\n", token);
+        if (strcmp("true", token) == 0) {
+            writePush(fw, __CONST, 0);
+            fprintf(fw, "not\n");
+        } else if (strcmp("false", token) == 0) {
+            writePush(fw, __CONST, 0);
+        }
     } else if (strcmp("(", token) == 0) {
         putBack();
         compileSymbol(fp, fw, "(");
@@ -450,7 +485,7 @@ void compileTerm(FILE *fp, FILE *fw)
         compileTerm(fp, fw);
         if (strcmp("-", temp) == 0)
             fprintf(fw, "neg\n");
-        else
+        else if (strcmp("~", temp) == 0)
             fprintf(fw, "not\n");
     }
 
@@ -477,14 +512,22 @@ void compileTerm(FILE *fp, FILE *fw)
 
 void compileIf(FILE *fp, FILE *fw)
 {
+    if_counter++;
     //fprintf(fw, "<ifStatement>\n");
     putBack();
     compileKeyword(fp, fw, 1, "if");
     compileSymbol(fp, fw, "(");
     compileExpression(fp, fw);
+
+    fprintf(fw, "if-goto IF_TRUE%d\n", if_counter);
+    fprintf(fw, "goto IF_FALSE%d\n", if_counter);
+    fprintf(fw, "label IF_TRUE%d\n", if_counter);
+
     compileSymbol(fp, fw, ")");
     compileSymbol(fp, fw, "{");
     compileStatements(fp, fw);
+
+    fprintf(fw, "goto IF_END%d\n", if_counter);
     // no need to get new token, compileStatement has done it to
     // check the ending
     putBack();
@@ -495,30 +538,39 @@ void compileIf(FILE *fp, FILE *fw)
         advance(fp);
     }
     if (strcmp("else", token) == 0) {
+        fprintf(fw, "label IF_FALSE%d\n", if_counter);
         putBack();
         compileKeyword(fp, fw, 1, "else");
         compileSymbol(fp, fw, "{");
         compileStatements(fp, fw);
+        fprintf(fw, "label IF_END%d\n", if_counter);
         putBack();
         compileSymbol(fp, fw, "}");
     } else {
         putBack();
     }
-
+    if_counter--;
     //fprintf(fw, "</ifStatement>\n");
 }
 
 void compileWhile(FILE *fp, FILE *fw)
 {
+    while_counter++;
+    fprintf(fw, "label WHILE_EXP%d\n", while_counter);
+
     //fprintf(fw, "<whileStatement>\n");
 
     putBack();
     compileKeyword(fp, fw, 1, "while");
     compileSymbol(fp, fw, "(");
     compileExpression(fp, fw);
+    fprintf(fw, "not\n");
+    fprintf(fw, "if-goto WHILE_END%d\n", while_counter);
     compileSymbol(fp, fw, ")");
     compileSymbol(fp, fw, "{");
     compileStatements(fp, fw);
+    fprintf(fw, "goto WHILE_EXP%d\n", while_counter);
+    fprintf(fw, "label WHILE_END%d\n", while_counter);
     // no need to get new token, compileStatement has done it to
     // check the ending
     putBack();

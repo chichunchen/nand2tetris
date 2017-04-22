@@ -91,32 +91,47 @@ int varCount(int choice, int kind)
     return count;
 }
 
-int kindOf(int choice, char *name)
+int kindOf(char *name)
 {
-    struct nlist *np = lookup(choice, name);
+    struct nlist *np = lookup(CLASS, name);
     if (np)
         return np->kind;
-    else
-        return NONE;
+    else {
+        np = lookup(SUBROUTINE, name);
+        if (np)
+            return np->kind;
+        else
+            return NONE;
+    }
 }
 
 // Returns the type of the named identifier in the current scope
-char *typeOf(int choice, char *name)
+char *typeOf(char *name)
 {
-    struct nlist *np = lookup(choice, name);
+    struct nlist *np = lookup(CLASS, name);
     if (np)
         return np->type;
-    else
-        return NULL;
+    else {
+        np = lookup(SUBROUTINE, name);
+        if (np)
+            return np->type;
+        else
+            return NULL;
+    }
 }
 
-int indexOf(int choice, char *name)
+int indexOf(char *name)
 {
-    struct nlist *np = lookup(choice, name);
+    struct nlist *np = lookup(CLASS, name);
     if (np)
         return np->index;
-    else
-        return NONE;
+    else {
+        np = lookup(SUBROUTINE, name);
+        if (np)
+            return np->index;
+        else
+            return NONE;
+    }
 }
 
 void cleanSubroutineTab()
@@ -162,7 +177,6 @@ void printTable()
         struct nlist *np = subroutine_hashtab[i];
         if (np && np->name) {
             printf("name: %s, type: %s, kind: %d, index: %d\n", np->name, np->type, np->kind, np->index);
-
         }
     }
 }
