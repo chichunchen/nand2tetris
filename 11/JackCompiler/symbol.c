@@ -10,7 +10,10 @@ struct nlist {
 };
 
 struct nlist *class_hashtab[HASHSIZE];
+struct nlist **chead = class_hashtab;
+
 struct nlist *subroutine_hashtab[HASHSIZE];
+struct nlist **shead = subroutine_hashtab;
 
 unsigned hash(char *s)
 {
@@ -112,15 +115,49 @@ int indexOf(int choice, char *name)
         return NONE;
 }
 
+void cleanSubroutineTab()
+{
+    int i;
+    for (i = 0; i < HASHSIZE; i++) {
+        if (subroutine_hashtab[i]) {
+            subroutine_hashtab[i]->kind = NONE;
+            subroutine_hashtab[i]->index = NONE;
+            if (subroutine_hashtab[i]->name) {
+                free(subroutine_hashtab[i]->name);
+            }
+            if (subroutine_hashtab[i]->type) {
+                free(subroutine_hashtab[i]->type);
+            }
+            subroutine_hashtab[i] = NULL;
+        }
+    }
+}
+
 void symbolTest()
 {
     char *v1 = "a";
     char *v2 = "b";
-    Define(CLASS, v1, "int", STATIC, 1);
-    Define(CLASS, v2, "string", STATIC, 0);
+    Define(SUBROUTINE, v1, "int", ARG, varCount(SUBROUTINE, ARG));
+    Define(SUBROUTINE, v2, "string", ARG, varCount(SUBROUTINE, ARG));
 
-    printf("success, type: %s, kindof: %d, indexof: %d\n", typeOf(CLASS, v1), kindOf(CLASS, v1), indexOf(CLASS, v1));
-    printf("success, type: %s, kindof: %d, indexof: %d\n", typeOf(CLASS, v2), kindOf(CLASS, v2), indexOf(CLASS, v2));
+    printTable();
 
-    printf("var count: %d\n", varCount(CLASS, STATIC));
+    cleanSubroutineTab();
+
+    Define(SUBROUTINE, "ahah", "int", STATIC, varCount(SUBROUTINE, STATIC));
+    Define(SUBROUTINE, "aaa", "string", ARG, varCount(SUBROUTINE, ARG));
+
+    printTable();
+}
+
+void printTable()
+{
+    printf("------------ SubRoutine table -------------\n");
+    int i;
+    for (i = 0; i < HASHSIZE; i++) {
+        struct nlist *np = subroutine_hashtab[i];
+        if (np && np->name) {
+            printf("name: %s, type: %s, kind: %d, index: %d\n", np->name, np->type, np->kind, np->index);
+        }
+    }
 }

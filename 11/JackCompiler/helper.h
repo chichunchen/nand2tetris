@@ -67,6 +67,8 @@ struct nlist *Define(int choice, char *name, char* type, int kind, int index);
 int varCount(int choice, int kind);
 int kindOf(int choice, char *name);
 char *typeOf(int choice, char *name);
+void cleanSubroutineTab();
 void symbolTest();
+void printTable();
 
 #endif

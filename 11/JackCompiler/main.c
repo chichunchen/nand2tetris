@@ -8,7 +8,6 @@ int tokenType;
 
 int main(int argc, const char *argv[])
 {
-    symbolTest();
     if (argc < 2)
         printf("usage: ./a.out <name of file or directory>\n");
     else {

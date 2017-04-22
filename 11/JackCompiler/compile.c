@@ -179,12 +179,16 @@ void compileSubroutine(FILE *fp, FILE *fw)
     putBack();
     compileSymbol(fp, fw, "}");
 
+    printTable();
+    cleanSubroutineTab();
+
     //fprintf(fw, "</subroutineBody>\n");
     //fprintf(fw, "</subroutineDec>\n");
 }
 
 void compileParameterList(FILE *fp, FILE *fw)
 {
+    char type[BUFSIZ];
     //fprintf(fw, "<parameterList>\n");
 
     if (has_more_token(fp)) {           // type for parameter
@@ -193,12 +197,14 @@ void compileParameterList(FILE *fp, FILE *fw)
             if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
                 //fprintf(fw, "<keyword> %s </keyword>\n", token);
             }
+            strcpy(type, token);
         } else if (strcmp(")", token) == 0) {   // no parameter
             //fprintf(fw, "</parameterList>\n");
             return;
         }
     }
     compileIdentifier(fp, fw, "varName");
+    Define(SUBROUTINE, token, type, ARG, varCount(SUBROUTINE, ARG));
 
     // (',' (type varName)*)?
     while(has_more_token(fp)) {
@@ -216,8 +222,10 @@ void compileParameterList(FILE *fp, FILE *fw)
                     putBack();
                     compileIdentifier(fp, fw, "custom type");
                 }
+                strcpy(type, token);
             }
             compileIdentifier(fp, fw, "varName");
+            Define(SUBROUTINE, token, type, ARG, varCount(SUBROUTINE, ARG));
         } else {
             break;
         }
@@ -229,6 +237,7 @@ void compileParameterList(FILE *fp, FILE *fw)
 // 'var' type varName (',' varName)* ';'
 void compileVarDec(FILE *fp, FILE *fw)
 {
+    char type[BUFSIZ];
     //fprintf(fw, "<varDec>\n");
 
     putBack();
@@ -241,9 +250,11 @@ void compileVarDec(FILE *fp, FILE *fw)
         } else if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN || keyWord() == _VOID) {
             //fprintf(fw, "<keyword> %s </keyword>\n", token);
         }
+        strcpy(type, token);
     }
 
     compileIdentifier(fp, fw, "varName");
+    Define(SUBROUTINE, token, type, VAR, varCount(SUBROUTINE, VAR));
 
     // it can be ',' or ';'
     if (has_more_token(fp)) {
@@ -252,7 +263,9 @@ void compileVarDec(FILE *fp, FILE *fw)
             while (strcmp(";", token) != 0) {
                 // (',' varName)*
                 //fprintf(fw, "<symbol> %s </symbol>\n", token);      // ','
+                strcpy(type, token);
                 compileIdentifier(fp, fw, "varName");
+                Define(SUBROUTINE, token, type, VAR, varCount(SUBROUTINE, VAR));
                 if (has_more_token(fp))
                     advance(fp);
             }
