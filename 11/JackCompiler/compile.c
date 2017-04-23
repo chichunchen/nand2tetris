@@ -291,7 +291,6 @@ void compileVarDec(FILE *fp, FILE *fw)
         }
         strcpy(type, token);
     }
-
     compileIdentifier(fp, fw, "varName");
     Define(SUBROUTINE, token, type, VAR, varCount(SUBROUTINE, VAR));
 
@@ -302,7 +301,6 @@ void compileVarDec(FILE *fp, FILE *fw)
             while (strcmp(";", token) != 0) {
                 // (',' varName)*
                 //fprintf(fw, "<symbol> %s </symbol>\n", token);      // ','
-                strcpy(type, token);
                 compileIdentifier(fp, fw, "varName");
                 Define(SUBROUTINE, token, type, VAR, varCount(SUBROUTINE, VAR));
                 if (has_more_token(fp))
@@ -351,6 +349,7 @@ void compileStatements(FILE *fp, FILE *fw)
 void compileLet(FILE *fp, FILE *fw)
 {
     char varName[BUFSIZ];
+    int is_array = 0;
     //fprintf(fw, "<letStatement>\n");
 
     if (tokenType == KEYWORD) {     // let
@@ -367,8 +366,22 @@ void compileLet(FILE *fp, FILE *fw)
     // ('[' expression ']')?
     if (strcmp("[", token) == 0) {
         putBack();
+
         compileSymbol(fp, fw, "[");
+        // expression 1
         compileExpression(fp, fw);
+
+        if (kindOf(varName) == VAR) {
+            writePush(fw, __LOCAL, indexOf(varName));
+        } else if (kindOf(varName) == FIELD) {
+            writePush(fw, __THIS, indexOf(varName));
+        } else if (kindOf(varName) == STATIC) {
+            writePush(fw, __STATIC, indexOf(varName));
+        }
+
+        writeArithmetic(fw, "+");
+        is_array = 1;
+
         compileSymbol(fp, fw, "]");
         compileSymbol(fp, fw, "=");
     } else {
@@ -377,9 +390,16 @@ void compileLet(FILE *fp, FILE *fw)
     }
 
     compileExpression(fp, fw);
+
     compileSymbol(fp, fw, ";");
 
-    if (kindOf(varName) == VAR) {
+    if (is_array) {
+        writePop(fw, __TEMP, 0);
+        writePop(fw, __POINTER, 1);
+        writePush(fw, __TEMP, 0);
+        writePop(fw, __THAT, 0);
+        is_array = 0;
+    } else if (kindOf(varName) == VAR) {
         writePop(fw, __LOCAL, indexOf(varName));
     } else if (kindOf(varName) == ARG) {
         writePop(fw, __ARG, indexOf(varName));
@@ -390,7 +410,6 @@ void compileLet(FILE *fp, FILE *fw)
     } else if (kindOf(varName) == FIELD) {
         writePop(fw, __POINTER, indexOf(varName));
     }
-    //writePop(fw, )
 
     //fprintf(fw, "</letStatement>\n");
 }
@@ -494,6 +513,13 @@ void compileTerm(FILE *fp, FILE *fw)
     } else if (tokenType == STRING_CONST) {
         putBack();
         compileStringConstant(fp, fw);
+        writePush(fw, __CONST, strlen(token));
+        fprintf(fw, "call String.new 1\n");
+        int i;
+        for (i = 0; i < strlen(token); i++) {
+            writePush(fw, __CONST, token[i]);
+            fprintf(fw, "call String.appendChar 2\n");
+        }
     } else if (tokenType == KEYWORD) {
         putBack();
         compileKeyword(fp, fw, 1, "keywordConstant");
@@ -533,9 +559,15 @@ void compileTerm(FILE *fp, FILE *fw)
         putBack();
         compileSubroutineCall(fp, fw);
     } else if (strcmp("[", token) == 0) {
+        //writeArithmetic(fw, "+");
         putBack();
         compileSymbol(fp, fw, "[");
         compileExpression(fp, fw);
+
+        writeArithmetic(fw, "+");
+        writePop(fw, __POINTER, 1);
+        writePush(fw, __THAT, 0);
+
         compileSymbol(fp, fw, "]");
     } else {
         putBack();

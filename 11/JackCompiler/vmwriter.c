@@ -66,6 +66,8 @@ void writeArithmetic(FILE *fw, char *command)
         fprintf(fw, "sub\n");
     } else if (strcmp(command, "*") == 0) {
         fprintf(fw, "call Math.multiply 2\n", 2);
+    } else if (strcmp(command, "/") == 0) {
+        fprintf(fw, "call Math.divide 2\n", 2);
     } else if (strcmp(command, "&gt;") == 0) {
         fprintf(fw, "gt\n");
     } else if (strcmp(command, "&lt;") == 0) {
