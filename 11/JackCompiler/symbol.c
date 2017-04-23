@@ -152,6 +152,24 @@ void cleanSubroutineTab()
     }
 }
 
+void cleanClassTab()
+{
+    int i;
+    for (i = 0; i < HASHSIZE; i++) {
+        if (class_hashtab[i]) {
+            class_hashtab[i]->kind = NONE;
+            class_hashtab[i]->index = NONE;
+            if (class_hashtab[i]->name) {
+                free(class_hashtab[i]->name);
+            }
+            if (class_hashtab[i]->type) {
+                free(class_hashtab[i]->type);
+            }
+            class_hashtab[i] = NULL;
+        }
+    }
+}
+
 void symbolTest()
 {
     char *v1 = "a";

@@ -69,6 +69,7 @@ int kindOf(char *name);
 char *typeOf(char *name);
 int indexOf(char *name);
 void cleanSubroutineTab();
+void cleanClassTab();
 void symbolTest();
 void printClassTable();
 void printSubTable();

@@ -76,6 +76,8 @@ void writeArithmetic(FILE *fw, char *command)
         fprintf(fw, "eq\n");
     } else if (strcmp(command, "&amp;") == 0) {
         fprintf(fw, "and\n");
+    } else if (strcmp(command, "|") == 0) {
+        fprintf(fw, "or\n");
     }
 }
 
