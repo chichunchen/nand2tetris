@@ -32,6 +32,7 @@ char *setFileName(const char *arg);
 #define putBack() ((putback=1))
 int has_more_token(FILE *fp);
 void advance(FILE *fp);
+int eat(FILE *fp);
 int keyWord();
 void tokenTest(FILE *fp, FILE *fw);
 
@@ -81,5 +82,8 @@ void writeArithmetic(FILE *fw, char *command);
 void writeLabel(FILE *fw, char *label);
 void writeGoto(FILE *fw, char *label);
 void writeIf(FILE *fw, char *label);
+void writeCall(FILE *fw, char *name, int nLocals);
+void writeFunction(FILE *fw, char *name, int nLocals);
+void writeReturn(FILE *fw);
 
 #endif

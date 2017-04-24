@@ -65,9 +65,9 @@ void writeArithmetic(FILE *fw, char *command)
     } else if (strcmp(command, "-") == 0) {
         fprintf(fw, "sub\n");
     } else if (strcmp(command, "*") == 0) {
-        fprintf(fw, "call Math.multiply 2\n", 2);
+        fprintf(fw, "call Math.multiply 2\n");
     } else if (strcmp(command, "/") == 0) {
-        fprintf(fw, "call Math.divide 2\n", 2);
+        fprintf(fw, "call Math.divide 2\n");
     } else if (strcmp(command, "&gt;") == 0) {
         fprintf(fw, "gt\n");
     } else if (strcmp(command, "&lt;") == 0) {
@@ -78,6 +78,8 @@ void writeArithmetic(FILE *fw, char *command)
         fprintf(fw, "and\n");
     } else if (strcmp(command, "|") == 0) {
         fprintf(fw, "or\n");
+    } else if (strcmp(command, "~") == 0) {
+        fprintf(fw, "not\n");
     }
 }
 
@@ -99,4 +101,14 @@ void writeIf(FILE *fw, char *label)
 void writeCall(FILE *fw, char *name, int nLocals)
 {
     fprintf(fw, "call %s %d\n", name, nLocals);
+}
+
+void writeFunction(FILE *fw, char *name, int nLocals)
+{
+    fprintf(fw, "function %s %d\n", name, nLocals);
+}
+
+void writeReturn(FILE *fw)
+{
+    fprintf(fw, "return\n");
 }

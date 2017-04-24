@@ -118,6 +118,17 @@ void advance(FILE *fp)
     //printf("%d\n", tokenType);
 }
 
+// eat one token and then renew the token and the tokenType
+int eat(FILE *fp)
+{
+    if (has_more_token(fp)) {
+        advance(fp);
+        return TRUE;
+    }
+    else
+        return FALSE;
+}
+
 // returns the keyword which is the current token. Should be called only when tokenType is KEYWORD
 inline int keyWord()
 {
