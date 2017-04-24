@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="Square.jack" />
+				<Option parameters="Square" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -32,7 +32,25 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="compile.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="constant.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="constant.h" />
+		<Unit filename="dbg.h" />
+		<Unit filename="helper.h" />
 		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="parser.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="symbol.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="vmwriter.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>

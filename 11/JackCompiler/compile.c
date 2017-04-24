@@ -3,8 +3,8 @@
 
 /* terminals */
 
-char className[BUFSIZ];
-char LL1_TEMP[BUFSIZ];
+char className[100];
+char LL1_TEMP[100];
 
 int if_counter = -1;
 int while_counter = -1;
@@ -57,7 +57,7 @@ void inline compileIdentifier(FILE *fp, FILE *fw, char *info)
     }
 }
 
-void inline checkType()
+void checkType()
 {
     if (tokenType == IDENTIFIER) {
         //fprintf(fw, "<identifier> %s </identifier>\n", token);
@@ -67,7 +67,7 @@ void inline checkType()
     }
 }
 
-void inline checkVarType()
+void checkVarType()
 {
     if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
         //fprintf(fw, "<keyword> %s </keyword>\n", token);
@@ -499,7 +499,7 @@ void compileTerm(FILE *fp, FILE *fw)
     } else if (strcmp(unaryOp[0], token) == 0 || strcmp(unaryOp[1], token) == 0) {
         putBack();
         compileSymbol(fp, fw, "unaryOp");
-        char temp[BUFSIZ];
+        char temp[100];
         strcpy(temp, token);
         compileTerm(fp, fw);
         if (strcmp("-", temp) == 0)
@@ -622,9 +622,9 @@ int compileExpressionList(FILE *fp, FILE *fw)
 
 void compileSubroutineCall(FILE *fp, FILE *fw)
 {
-    char object[BUFSIZ];
-    char funcName[BUFSIZ];
-    char subroutine[BUFSIZ];
+    char object[100];
+    char subject[100];
+    char subroutine[100];
     int count = 0;
 
     enum _funcType {
@@ -636,23 +636,32 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
     // subroutineName | className
     eat(fp);
 
+    // LL1_temp stores the identifier before ".", and the it can be both
+    // the name of the Class, ex: Screen, or the name of the object, ex:
+    // ball.
     if (is_LL1) {
         putBack();
-        strcpy(funcName, LL1_TEMP);
+        strcpy(subject, LL1_TEMP);
         is_LL1 = 0;
     }
+    // the token just like LL1_temp can be either the name of the Class, ex: Screen,
+    // or the name of the object, ex: ball.
     else if (tokenType == IDENTIFIER) {
+        // the token is a variable or a field, such as bat or ball
+        // the subject stores the type of the variable, therefore, it might be Bat or Ball
         if (typeOf(token)) {
-            strcpy(funcName, typeOf(token));
+            strcpy(subject, typeOf(token));
             strcpy(object, token);
             if (kindOf(token) == VAR) {
                 writePush(fw, __LOCAL, indexOf(token));
             } else if (kindOf(token) == FIELD) {
                 writePush(fw, __THIS, indexOf(token));
             }
-        } else {
+        }
+        // the subject is the name of the class, such as Screen
+        else {
             //printf("function: name: %s\n", token);
-            strcpy(funcName, token);
+            strcpy(subject, token);
         }
     }
 
@@ -671,7 +680,7 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
         compileSymbol(fp, fw, "(");
     }
 
-    //
+    // push pointer before the expressionList pushing the variables*
     if (funcType == SIMPLE) {
         writePush(fw, __POINTER, 0);
     }
@@ -686,15 +695,15 @@ void compileSubroutineCall(FILE *fp, FILE *fw)
 
     switch(funcType) {
     case SIMPLE:
-        fprintf(fw, "call %s.%s %d\n", className, funcName, count+1);
+        fprintf(fw, "call %s.%s %d\n", className, subject, count+1);
         break;
     case COMPLICATED:
         if (kindOf(object) != NONE) {         // method
-            fprintf(fw, "call %s.%s %d\n", funcName, subroutine, count+1);
-        } else if (kindOf(funcName) != NONE) {
-            fprintf(fw, "call %s.%s %d\n", typeOf(funcName), subroutine, count+1);
+            fprintf(fw, "call %s.%s %d\n", subject, subroutine, count+1);
+        } else if (kindOf(subject) != NONE) {
+            fprintf(fw, "call %s.%s %d\n", typeOf(subject), subroutine, count+1);
         } else {
-            fprintf(fw, "call %s.%s %d\n", funcName, subroutine, count);
+            fprintf(fw, "call %s.%s %d\n", subject, subroutine, count);
         }
         break;
     }
