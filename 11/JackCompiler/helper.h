@@ -39,11 +39,11 @@ void tokenTest(FILE *fp, FILE *fw);
 /* Compilation Module */
 
 // compiling terminal
-void compileKeyword(FILE *fp, FILE *fw, int options, char *info);
-void compileSymbol(FILE *fp, FILE *fw, char *info);
-void compileIntegerConstant(FILE *fp, FILE *fw);
-void compileStringConstant(FILE *fp, FILE *fw);
-void compileIdentifier(FILE *fp, FILE *fw, char *info);
+static inline void compileKeyword(FILE *fp, FILE *fw, int options, char *info);
+static inline void compileSymbol(FILE *fp, FILE *fw, char *info);
+static inline void compileIntegerConstant(FILE *fp, FILE *fw);
+static inline void compileStringConstant(FILE *fp, FILE *fw);
+static inline void compileIdentifier(FILE *fp, FILE *fw, char *info);
 
 // compiling nonterminal
 void compileClass(FILE *fp, FILE *fw);

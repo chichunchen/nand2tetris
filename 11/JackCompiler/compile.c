@@ -9,7 +9,7 @@ char LL1_TEMP[100];
 int if_counter = -1;
 int while_counter = -1;
 
-void inline compileKeyword(FILE *fp, FILE *fw, int options, char *info)
+static inline void compileKeyword(FILE *fp, FILE *fw, int options, char *info)
 {
     if (has_more_token(fp)) {
         advance(fp);
@@ -21,7 +21,7 @@ void inline compileKeyword(FILE *fp, FILE *fw, int options, char *info)
     }
 }
 
-void inline compileSymbol(FILE *fp, FILE *fw, char *info)
+static inline void compileSymbol(FILE *fp, FILE *fw, char *info)
 {
     if (has_more_token(fp)) {
         advance(fp);
@@ -31,7 +31,7 @@ void inline compileSymbol(FILE *fp, FILE *fw, char *info)
     }
 }
 
-void inline compileIntegerConstant(FILE *fp, FILE *fw)
+static inline void compileIntegerConstant(FILE *fp, FILE *fw)
 {
     if (has_more_token(fp)) {
         advance(fp);
@@ -39,7 +39,7 @@ void inline compileIntegerConstant(FILE *fp, FILE *fw)
     }
 }
 
-void inline compileStringConstant(FILE *fp, FILE *fw)
+static inline void compileStringConstant(FILE *fp, FILE *fw)
 {
     if (has_more_token(fp)) {
         advance(fp);
@@ -47,7 +47,7 @@ void inline compileStringConstant(FILE *fp, FILE *fw)
     }
 }
 
-void inline compileIdentifier(FILE *fp, FILE *fw, char *info)
+static inline void compileIdentifier(FILE *fp, FILE *fw, char *info)
 {
     if (has_more_token(fp)) {
         advance(fp);
@@ -57,7 +57,7 @@ void inline compileIdentifier(FILE *fp, FILE *fw, char *info)
     }
 }
 
-void checkType()
+static inline void checkType()
 {
     if (tokenType == IDENTIFIER) {
         //fprintf(fw, "<identifier> %s </identifier>\n", token);
@@ -67,7 +67,7 @@ void checkType()
     }
 }
 
-void checkVarType()
+static inline void checkVarType()
 {
     if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
         //fprintf(fw, "<keyword> %s </keyword>\n", token);
@@ -469,7 +469,7 @@ void compileTerm(FILE *fp, FILE *fw)
         compileStringConstant(fp, fw);
         writePush(fw, __CONST, strlen(token));
         fprintf(fw, "call String.new 1\n");
-        int i;
+        unsigned i;
         for (i = 0; i < strlen(token); i++) {
             writePush(fw, __CONST, token[i]);
             fprintf(fw, "call String.appendChar 2\n");
