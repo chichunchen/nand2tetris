@@ -57,7 +57,7 @@ void inline compileIdentifier(FILE *fp, FILE *fw, char *info)
     }
 }
 
-void inline checkType()
+void checkType()
 {
     if (tokenType == IDENTIFIER) {
         //fprintf(fw, "<identifier> %s </identifier>\n", token);
@@ -67,7 +67,7 @@ void inline checkType()
     }
 }
 
-void inline checkVarType()
+void checkVarType()
 {
     if (keyWord() == _INT || keyWord() == _CHAR || keyWord() == _BOOLEAN) {
         //fprintf(fw, "<keyword> %s </keyword>\n", token);
