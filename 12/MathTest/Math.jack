@@ -1,0 +1,131 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Math.jack
+
+/**
+ * A library of commonly used mathematical functions.
+ * Note: Jack compilers implement multiplication and division using OS method calls.
+ */
+class Math {
+
+    /** Initializes the library. */
+    function void init() {
+      return;
+    }
+
+    /** Returns the absolute value of x. */
+    function int abs(int x) {
+      if (x < 0) {
+        return -x;
+      }
+      return x;
+    }
+
+    /** Returns the product of x and y.
+     *  When a Jack compiler detects the multiplication operator '*' in the
+     *  program's code, it handles it by invoking this method. In other words,
+     *  the Jack expressions x*y and multiply(x,y) return the same value.
+     */
+    function int multiply(int x, int y) {
+      var int sum;
+      var int shiftedX;
+      var int i;
+      var int bit;
+      let sum = 0;
+      let shiftedX = x;
+      let bit = 1;
+      let i = 0;
+      while(i < 16) {
+        if ((y & bit) = bit) {
+            let sum = sum + shiftedX;
+        }
+        let shiftedX = shiftedX + shiftedX;
+        let bit = bit + bit;
+        let i = i + 1;
+      }
+      return sum;
+    }
+
+    /** Returns the integer part of x/y.
+     *  When a Jack compiler detects the multiplication operator '/' in the
+     *  program's code, it handles it by invoking this method. In other words,
+     *  the Jack expressions x/y and divide(x,y) return the same value.
+     */
+    function int divide(int x, int y) {
+      var int xsign;
+      var int ysign;
+      var int q;
+
+      let xsign = 1;
+      let ysign = 1;
+      if (x < 0) {
+        let xsign = -1;
+        let x = Math.abs(x);
+      }
+      if (y < 0) {
+        let ysign = -1;
+        let y = Math.abs(y);
+      }
+
+      if ((y > x) | (y < 0)) {    // y < 0 to check overflow
+        return 0;
+      }
+      let q = Math.divide(x, 2 * y);
+      if ((x - (2 * q * y)) < y) {
+        return (xsign * ysign) * 2 * q;
+      } else {
+        return (xsign * ysign) * ((2 * q) + 1);
+      }
+    }
+
+    function int pow(int x, int n) {
+      var int result;
+      let result = 1;
+      if (n = 0) {
+        return result;
+      }
+      // result might overflow
+      while (n > 0) {
+        let result = result * x;
+        let n = n - 1;
+      }
+      return result;
+    }
+
+    /** Returns the integer part of the square root of x. */
+    function int sqrt(int x) {
+      var int y;
+      var int j;
+      let y = 0;
+      let j = 7;      // 16 bit, j = n/2 - 1, j = 7
+      while((j > 0) | (j = 0)) {
+        // prevent (y+2^j)^2 from overflow
+        if (Math.pow((y + Math.pow(2, j)), 2) > 0) {
+          if ((Math.pow((y + Math.pow(2, j)), 2) < x) | (Math.pow((y + Math.pow(2, j)), 2) = x)) {
+            let y = y + Math.pow(2, j);
+          }
+        }
+        let j = j - 1;
+      }
+      return y;
+    }
+
+    /** Returns the greater number. */
+    function int max(int a, int b) {
+      if (a > b) {
+        return a;
+      } else {
+        return b;
+      }
+    }
+
+    /** Returns the smaller number. */
+    function int min(int a, int b) {
+      if (a < b) {
+        return a;
+      } else {
+        return b;
+      }
+    }
+}
