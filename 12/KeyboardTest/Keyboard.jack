@@ -70,12 +70,12 @@ class Keyboard {
 
         while(true) {
             let c = Keyboard.readChar();
-            if (c = 128) {          // newline
-                do Output.printChar(128);
+            if (c = String.newLine()) {            // newline
+                do Output.printChar(String.newLine());
                 return str;
             }
             else {
-                if (c = 129) {      // backspace
+                if (c = String.backSpace()) {      // backspace
                     do str.eraseLastChar();
                     // no need to "do Output.backSpace()"
                     // it seems that printing backspace itself backword

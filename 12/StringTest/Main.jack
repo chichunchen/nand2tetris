@@ -52,7 +52,6 @@ class Main {
         do Output.printString("eraseLastChar: ");     
         do Output.printString(s);                // eraseLastChar: ab-d
         do Output.println();
-        
         let s = "456";
         do Output.printString("intValue: ");
         do Output.printInt(s.intValue());        // intValue: 456
