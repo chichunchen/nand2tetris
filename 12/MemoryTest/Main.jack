@@ -36,7 +36,43 @@ class Main {
 
         do c.dispose();
         do b.dispose();
+        /*
+        do Main.leakTest();
+         */
 
+        return;
+    }
+
+    function void leakTest() {
+        var Array a, b, c, d, e, f;
+        var int n, size;
+
+        do Output.printString("Leak test");
+        do Output.println();
+        //do Main.printFreeList();
+
+        let size = 100;
+        let n = 0;
+        while (n < 1000) {
+            let a = Array.new(size);
+            let b = Array.new(size);
+            let c = Array.new(size);
+            let d = Array.new(size);
+            let e = Array.new(size);
+            let f = Array.new(size);
+            do e.dispose();         // a b c d - f
+            do b.dispose();         // a - c d - f
+            do a.dispose();         // --- c d - f      coalesce with following free block
+            do c.dispose();         // ----- d - f      coalesce with preceding free block
+            do d.dispose();         // --------- f      coalesce with surrounding free blocks
+            do f.dispose();
+
+            let n = n+1;
+            if (size < 1000) {
+                let size = size+11; // Increasing size ensures that freed blocks must
+            }                       // be coalesced, not just reused.
+        }
+        //do Main.printFreeList();
         return;
     }
 }
