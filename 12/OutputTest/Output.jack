@@ -18,13 +18,18 @@ class Output {
 
     // Character map for displaying characters
     static Array charMaps;
+    static int charHeight;
     static int cursorX, cursorY;
+    static int maxX, maxY;
 
     /** Initializes the screen, and locates the cursor at the screen's top-left. */
     function void init() {
         do Output.initMap();
+        let charHeight = 11;
         let cursorX = 0;
         let cursorY = 0;
+        let maxX = 504;     // 32 * 63
+        let maxY = 7744;    // 32 * 22 * 11
         return;
     }
 
@@ -153,17 +158,17 @@ class Output {
 	let map = Array.new(11);
         let charMaps[index] = map;
 
-        let map[0] = a;
-        let map[1] = b;
-        let map[2] = c;
-        let map[3] = d;
-        let map[4] = e;
-        let map[5] = f;
-        let map[6] = g;
-        let map[7] = h;
-        let map[8] = i;
-        let map[9] = j;
-        let map[10] = k;
+        let map[0] = a | (a*256);
+        let map[1] = b | (b*256);
+        let map[2] = c | (c*256);
+        let map[3] = d | (d*256);
+        let map[4] = e | (e*256);
+        let map[5] = f | (f*256);
+        let map[6] = g | (g*256);
+        let map[7] = h | (h*256);
+        let map[8] = i | (i*256);
+        let map[9] = j | (j*256);
+        let map[10] = k | (k*256);
 
         return;
     }
@@ -183,7 +188,7 @@ class Output {
     function void moveCursor(int i, int j) {
         var int addr;
         let cursorX = 8 * j;
-        let cursorY = 32 * 11 * i;
+        let cursorY = 352 * i;
         let addr = 16384 + ((cursorX / 16) + cursorY);
         do Memory.poke(addr, 0);
         return;
@@ -200,30 +205,38 @@ class Output {
     function void printChar(char c) {
         var Array character;
         var int addr;
-        var int value;
-        var int temp;
+        var int addr_temp;
+        var int two_old_char;
+        var int input_char;
         var int i;
+        var bool is_right_segment;
         let addr = 16384 + ((cursorX / 16) + cursorY);
+        let addr_temp = addr;
         let character = Output.getMap(c);
         let i = 0;
+        let is_right_segment = (Output.mod(cursorX, 16) > 0);
+
         // print
-        while(i < 11) {
-            let value = Memory.peek(addr);
-            let temp = character[i];
-            if (Output.mod(cursorX, 16) > 0) {
-                let temp = temp * 256;
+        while(i < charHeight) {
+            if (is_right_segment) {
+                let input_char = character[i] & (-256);
+                let two_old_char = Memory.peek(addr) & (255);
+            } else {
+                let input_char = character[i] & 255;
+                let two_old_char = Memory.peek(addr) & (-256);
             }
-            do Memory.poke(addr, value | temp);
+            do Memory.poke(addr, two_old_char | input_char);
             let addr = addr + 32;
             let i = i + 1;
         }
 
         // move cursor to next column
-        if (cursorX < 504) {
+        if (cursorX < maxX) {
             let cursorX = cursorX + 8;
         } else {
-            if (cursorY < 7744) {
-                let cursorY = cursorY + (32 * 11);
+            if (cursorY < maxY) {
+                let cursorX = 0;
+                let cursorY = cursorY + 352;
             } else {
                 let cursorX = 0;
                 let cursorY = 0;
@@ -280,8 +293,23 @@ class Output {
 
     /** Moves the cursor one column back. */
     function void backSpace() {
-        let cursorX = cursorX - 8;
+        if ((cursorX = 0) & (cursorY = 0)) {
+            let cursorX = maxX;
+            let cursorY = maxY;
+        }
+        if (cursorX = 0) {
+            let cursorY = cursorY - 352;
+            let cursorX = maxX;
+        } else {
+            let cursorX = cursorX - 8;
+        }
+
+        // clean
         do Output.printChar(32);
+
+        // compensate for the one forward column by printChar
+        let cursorX = cursorX - 8;
+
         return;
     }
 }

@@ -17,6 +17,7 @@ class Sys {
         do Keyboard.init();
         // String and Array has no init function
         do Main.main();
+        return;
     }
 
     /** Halts the program execution. */
