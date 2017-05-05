@@ -78,12 +78,14 @@ class Screen {
         let diff = 0;
         if (dy = 0) {
             do Screen.drawHorizontalLine(x1, x2, y1);
+            return;
         }
         if (dx = 0) {
             do Screen.drawVerticalLine(y1, y2, x1);
+            return;
         }
         // general line
-        if (y2 > y1) {
+        if ((y2 > y1) & (x2 > x1)) {
             while((a < (dx + 1)) & (b < (dy + 1))) {
                 do Screen.drawPixel(x1 + a, y1 + b);
                 if (diff < 0) {
@@ -94,18 +96,50 @@ class Screen {
                     let diff = diff - dx;
                 }
             }
-        } else {
-            // bug
+            return;
+        }
+        if ((x2 < x1) & (y2 > y1)) {
+            let dx = Math.abs(dx);
             while((a < (dx + 1)) & (b < (dy + 1))) {
-                do Screen.drawPixel(x1 + a, y1 + b);
+                do Screen.drawPixel(x1 - a, y1 + b);
                 if (diff < 0) {
                     let a = a + 1;
-                    let diff = diff - dy;
+                    let diff = diff + dy;
                 } else {
                     let b = b + 1;
-                    let diff = diff + dx;
+                    let diff = diff - dx;
                 }
             }
+            return;
+        }
+        if ((x2 > x1) & (y2 < y1)) {
+            let dy = Math.abs(dy);
+            while((a < (dx + 1)) & (b < (dy + 1))) {
+                do Screen.drawPixel(x1 + a, y1 - b);
+                if (diff < 0) {
+                    let a = a + 1;
+                    let diff = diff + dy;
+                } else {
+                    let b = b + 1;
+                    let diff = diff - dx;
+                }
+            }
+            return;
+        }
+        if ((y2 < y1) & (x2 < x1)) {
+            let dx = Math.abs(dx);
+            let dy = Math.abs(dy);
+            while((a < (dx + 1)) & (b < (dy + 1))) {
+                do Screen.drawPixel(x1 - a, y1 - b);
+                if (diff < 0) {
+                    let a = a + 1;
+                    let diff = diff + dy;
+                } else {
+                    let b = b + 1;
+                    let diff = diff - dx;
+                }
+            }
+            return;
         }
 
         return;
