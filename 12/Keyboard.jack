@@ -71,13 +71,13 @@ class Keyboard {
         while(true) {
             let c = Keyboard.readChar();
             if (c = String.newLine()) {            // newline
-                do Output.printChar(String.newLine());
+                do Output.println();
                 return str;
             }
             else {
                 if (c = String.backSpace()) {      // backspace
                     do str.eraseLastChar();
-                    // no need to "do Output.backSpace()"
+                    do Output.backSpace();
                     // it seems that printing backspace itself backword
                     // one column and clear the last character
                 } else {
