@@ -30,8 +30,7 @@ class String {
 
     /** Disposes this string. */
     method void dispose() {
-        do Array.dispose(str);
-        do Memory.deAlloc(this);
+        do Memory.deAlloc(str);
         return;
     }
 
