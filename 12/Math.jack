@@ -95,11 +95,11 @@ class Math {
         if ((y > x) | (y < 0)) {    // y < 0 to check overflow
             return 0;
         }
-        let q = Math.divide(x, 2 * y);
-        if ((x - (2 * q * y)) < y) {
-            return (xsign * ysign) * 2 * q;
+        let q = Math.divide(x, y+y);
+        if ((x - ((q+q) * y)) < y) {
+            return (xsign * ysign) * (q+q);
         } else {
-            return (xsign * ysign) * ((2 * q) + 1);
+            return (xsign * ysign) * ((q+q) + 1);
         }
     }
 
